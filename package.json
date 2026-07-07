@@ -10,13 +10,14 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "dist:win": "electron-vite build && electron-builder --win",
-    "dist:mac": "electron-vite build && electron-builder --mac"
+    "dist:win": "electron-vite build && electron-builder --win --publish never",
+    "dist:mac": "electron-vite build && electron-builder --mac --publish never"
   },
   "build": {
     "appId": "com.arkhipov.lifegam",
     "productName": "LifeGam",
     "asar": true,
+    "publish": null,
     "directories": {
       "output": "dist"
     },

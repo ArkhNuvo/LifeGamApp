@@ -1,0 +1,51 @@
+.checkin-card {
+  width: 420px;
+  text-align: center;
+}
+
+.checkin-step-indicator {
+  font-size: 11px;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.checkin-emojis {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 20px 0 8px;
+}
+
+.checkin-emoji-btn {
+  flex: 1;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.checkin-emoji-btn:hover {
+  border-color: var(--accent);
+  background: var(--bg-2);
+}
+
+.checkin-emoji {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.checkin-emoji-label {
+  font-size: 10px;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.checkin-card .modal-actions {
+  justify-content: center;
+}

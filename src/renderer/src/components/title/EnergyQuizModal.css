@@ -1,0 +1,46 @@
+.energy-quiz-card {
+  width: 440px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.quiz-section-title {
+  color: var(--accent);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 18px 0 10px;
+}
+
+.quiz-question {
+  margin-bottom: 12px;
+}
+
+.quiz-question-text {
+  font-size: 13px;
+  color: var(--text-1);
+  margin-bottom: 6px;
+}
+
+.quiz-scale,
+.quiz-yesno {
+  display: flex;
+  gap: 6px;
+}
+
+.quiz-scale-btn,
+.quiz-yesno-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  color: var(--text-1);
+  border-radius: 6px;
+  padding: 5px 10px;
+  min-width: 32px;
+}
+
+.quiz-scale-btn.active,
+.quiz-yesno-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}

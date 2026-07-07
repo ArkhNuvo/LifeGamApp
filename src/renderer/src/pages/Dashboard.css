@@ -1,0 +1,19 @@
+.dashboard {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 16px;
+  height: 100vh;
+  padding: 16px;
+}
+
+.dashboard-left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.dashboard-right {
+  min-height: 0;
+  min-width: 0;
+}

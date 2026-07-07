@@ -1,0 +1,53 @@
+.energy-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-top: 12px;
+}
+
+.energy-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.energy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.energy-percent {
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 36px;
+}
+
+.emoji-gauge {
+  position: relative;
+  display: inline-block;
+  font-size: 24px;
+  line-height: 1;
+  width: 28px;
+  height: 26px;
+}
+
+.emoji-gauge-bg,
+.emoji-gauge-fill {
+  position: absolute;
+  inset: 0;
+}
+
+.emoji-gauge-bg {
+  filter: grayscale(1);
+  opacity: 0.35;
+}
+
+.emoji-gauge-fill {
+  clip-path: inset(calc(100% - var(--pct)) 0 0 0);
+  transition: clip-path 0.3s ease;
+}

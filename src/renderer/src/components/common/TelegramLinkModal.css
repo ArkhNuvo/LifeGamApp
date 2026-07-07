@@ -1,0 +1,21 @@
+.telegram-modal {
+  width: 380px;
+}
+
+.telegram-status--ok {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
+.telegram-code {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: center;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 10px 0;
+  color: var(--accent);
+}

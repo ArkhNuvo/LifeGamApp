@@ -1,0 +1,118 @@
+.finance-panel {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.finance-checking {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 10px 14px;
+}
+
+.finance-label {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.finance-checking-view {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.finance-checking-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.finance-checking-edit input {
+  width: 90px;
+}
+
+.finance-checking-amount {
+  font-weight: 700;
+  color: var(--text-0);
+}
+
+.finance-savings-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 10px 14px;
+  font-weight: 600;
+}
+
+.finance-savings-toggle:hover {
+  border-color: var(--accent);
+}
+
+.finance-savings-total {
+  color: var(--accent-2);
+}
+
+.finance-savings-list {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.finance-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.finance-row:hover {
+  background: var(--bg-2);
+}
+
+.finance-row--form {
+  grid-template-columns: 1.4fr 0.9fr auto auto;
+}
+
+.finance-row--form input {
+  min-width: 0;
+}
+
+.finance-row-name {
+  color: var(--text-0);
+  font-size: 13px;
+}
+
+.finance-row-amount {
+  color: var(--text-1);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.finance-add-row {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-2);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 16px;
+}
+
+.finance-add-row:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

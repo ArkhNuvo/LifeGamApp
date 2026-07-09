@@ -17,4 +17,12 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
+      - name: Create and push release tag
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $tag = "v$version"
+          git tag $tag 2>$null
+          git push origin $tag 2>$null
+          exit 0
       - run: npm run release:win

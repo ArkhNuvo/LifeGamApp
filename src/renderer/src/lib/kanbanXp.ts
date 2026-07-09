@@ -9,6 +9,20 @@ export function xpForCard(card: Pick<KanbanCard, 'rewards'>): number {
   return card.rewards.reduce((sum, r) => sum + (r.xp || 0), 0)
 }
 
+/** Applies a signed money delta to the card's target checking category, or the general balance if unset/unknown. */
+function applyMoneyDelta(draft: UserData, card: KanbanCard, sign: 1 | -1): void {
+  const amount = sign * (card.money || 0)
+  if (!amount) return
+  const category = card.checkingCategoryId
+    ? draft.finance.checking.categories.find((c) => c.id === card.checkingCategoryId)
+    : undefined
+  if (category) {
+    category.balance += amount
+  } else {
+    draft.finance.checking.balance += amount
+  }
+}
+
 /**
  * Applies a completed card's effects: XP and money always apply (they're
  * cumulative totals), but the energy delta only applies if the card's
@@ -29,7 +43,7 @@ export function applyCardEffects(draft: UserData, card: KanbanCard): void {
       skill.xp += reward.xp
     }
   }
-  draft.finance.checking.balance += card.money || 0
+  applyMoneyDelta(draft, card, 1)
   if (card.completedDate === todayISO()) {
     draft.energy.mental = Math.max(0, Math.min(100, draft.energy.mental + (card.energyMental || 0)))
     draft.energy.physical = Math.max(
@@ -53,7 +67,7 @@ export function revertCardEffects(draft: UserData, card: KanbanCard): void {
       skill.xp = Math.max(0, skill.xp - reward.xp)
     }
   }
-  draft.finance.checking.balance -= card.money || 0
+  applyMoneyDelta(draft, card, -1)
   if (card.completedDate === todayISO()) {
     draft.energy.mental = Math.max(0, Math.min(100, draft.energy.mental - (card.energyMental || 0)))
     draft.energy.physical = Math.max(

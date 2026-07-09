@@ -78,6 +78,7 @@ const isv: Record<TranslationKey, string> = {
   'finance.checkingLabel': 'Tekući račun',
   'finance.savingsLabel': 'Uščednosti',
   'finance.amountPlaceholder': 'Suma, $',
+  'finance.categoryGeneralOption': 'Bez kategorije',
 
   'checkin.emoji.terrible': 'Sovsem ploho',
   'checkin.emoji.bad': 'Ne dobro',

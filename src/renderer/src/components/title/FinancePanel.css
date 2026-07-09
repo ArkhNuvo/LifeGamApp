@@ -5,42 +5,6 @@
   gap: 6px;
 }
 
-.finance-checking {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius) var(--radius) 0 0;
-  padding: 10px 14px;
-}
-
-.finance-label {
-  font-size: 12px;
-  color: var(--text-2);
-}
-
-.finance-checking-view {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.finance-checking-edit {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.finance-checking-edit input {
-  width: 90px;
-}
-
-.finance-checking-amount {
-  font-weight: 700;
-  color: var(--text-0);
-}
-
 .finance-savings-toggle {
   display: flex;
   justify-content: space-between;
@@ -48,7 +12,7 @@
   background: var(--bg-3);
   border: 1px solid var(--border);
   color: var(--text-0);
-  border-radius: 0 0 var(--radius) var(--radius);
+  border-radius: var(--radius);
   padding: 10px 14px;
   font-weight: 600;
 }

@@ -10,7 +10,11 @@ import type {
   UserData
 } from './types'
 
-function shapeCard(card: KanbanCard, skills: UserData['skills']): TelegramCatalogCard {
+function shapeCard(
+  card: KanbanCard,
+  skills: UserData['skills'],
+  checkingCategories: UserData['finance']['checking']['categories']
+): TelegramCatalogCard {
   return {
     id: card.id,
     title: card.title,
@@ -18,6 +22,7 @@ function shapeCard(card: KanbanCard, skills: UserData['skills']): TelegramCatalo
     energyMental: card.energyMental,
     energyPhysical: card.energyPhysical,
     money: card.money,
+    checkingCategoryName: checkingCategories.find((c) => c.id === card.checkingCategoryId)?.name ?? null,
     done: card.done,
     rewards: card.rewards.map((r) => {
       const skill = skills.find((s) => s.id === r.skillId)
@@ -39,6 +44,8 @@ export function buildCatalogPayload(data: UserData): TelegramCatalogPayload {
   const sortedColumns = [...currentColumns].sort((a, b) => a.order - b.order)
   const columns = sortedColumns.map((c) => ({ id: c.id, name: c.name, status: c.status }))
 
+  const checkingCategories = data.finance.checking.categories
+
   const today = todayISO()
   const plannedCards: TelegramCatalogCard[] = []
   const doneTodayCards: TelegramCatalogCard[] = []
@@ -51,13 +58,13 @@ export function buildCatalogPayload(data: UserData): TelegramCatalogPayload {
       // (covers bot-created cards, which default completedDate to null).
       const isForToday = card.completedDate ? card.completedDate === today : card.createdDate === today
       if (!card.done && isTodoOrPlanned && isForToday) {
-        plannedCards.push(shapeCard(card, data.skills))
+        plannedCards.push(shapeCard(card, data.skills, checkingCategories))
       }
       if (!card.done && isTodoOrPlanned) {
-        weekCards.push(shapeCard(card, data.skills))
+        weekCards.push(shapeCard(card, data.skills, checkingCategories))
       }
       if (card.done && card.completedDate === today) {
-        doneTodayCards.push(shapeCard(card, data.skills))
+        doneTodayCards.push(shapeCard(card, data.skills, checkingCategories))
       }
     }
   }
@@ -72,10 +79,20 @@ export function buildCatalogPayload(data: UserData): TelegramCatalogPayload {
     xpForNextLevel: progress.xpForNextLevel,
     energyMental: data.energy.mental,
     energyPhysical: data.energy.physical,
-    checkingBalance: data.finance.checking.balance
+    checkingBalance:
+      data.finance.checking.balance + checkingCategories.reduce((sum, c) => sum + c.balance, 0)
   }
 
-  return { skills, columns, plannedCards, doneTodayCards, weekCards, resources, language }
+  return {
+    skills,
+    columns,
+    checkingCategories: checkingCategories.map((c) => ({ id: c.id, name: c.name })),
+    plannedCards,
+    doneTodayCards,
+    weekCards,
+    resources,
+    language
+  }
 }
 
 export interface CardLookupResult {

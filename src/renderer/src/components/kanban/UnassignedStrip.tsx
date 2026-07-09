@@ -28,6 +28,7 @@ export default function UnassignedStrip(): JSX.Element {
         energyMental: values.energyMental,
         energyPhysical: values.energyPhysical,
         money: values.money,
+        checkingCategoryId: values.checkingCategoryId,
         createdDate: values.createdDate,
         completedDate: values.completedDate,
         done: false,
@@ -48,6 +49,7 @@ export default function UnassignedStrip(): JSX.Element {
         card.energyMental = values.energyMental
         card.energyPhysical = values.energyPhysical
         card.money = values.money
+        card.checkingCategoryId = values.checkingCategoryId
         card.createdDate = values.createdDate
         card.completedDate = values.completedDate
       }

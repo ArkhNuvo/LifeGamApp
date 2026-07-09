@@ -83,7 +83,7 @@ function defaultUserData(username: string): UserData {
     totalXp: 0,
     energy: { mental: 100, physical: 100, lastCheckinDate: null },
     finance: {
-      checking: { balance: 0 },
+      checking: { balance: 0, categories: [] },
       savings: []
     },
     skills: [],
@@ -157,6 +157,9 @@ function normalizeCard(card: Record<string, unknown>): void {
   if (typeof card.money !== 'number') {
     card.money = 0
   }
+  if (typeof card.checkingCategoryId === 'undefined') {
+    card.checkingCategoryId = null
+  }
   if (typeof card.completedDate === 'undefined') {
     // Missing entirely = pre-completedDate schema; a present `null` is an intentional "not done yet".
     card.completedDate = typeof card.dueDate === 'string' ? card.dueDate : card.createdDate
@@ -200,6 +203,9 @@ function normalizeUserData(data: UserData): UserData {
   }
   if (!data.telegram) {
     data.telegram = { apiToken: null }
+  }
+  if (!Array.isArray(data.finance.checking.categories)) {
+    data.finance.checking.categories = []
   }
   if (typeof data.profile.displayName === 'undefined') {
     data.profile.displayName = null

@@ -42,6 +42,7 @@ function applyCreateAction(draft: UserData, payload: TelegramCreateActionPayload
     energyMental: payload.energyMental,
     energyPhysical: payload.energyPhysical,
     money: payload.money,
+    checkingCategoryId: payload.checkingCategoryId,
     createdDate: payload.createdDate,
     completedDate: payload.completedDate,
     done: false,

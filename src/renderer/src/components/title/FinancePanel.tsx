@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
 import { newId } from '../../lib/ids'
-import type { SavingsEntry } from '../../lib/types'
+import type { CheckingCategory, SavingsEntry } from '../../lib/types'
 import { useT } from '../../lib/i18n/useT'
 import './FinancePanel.css'
 
@@ -11,35 +11,27 @@ interface RowFormState {
 }
 
 const EMPTY_FORM: RowFormState = { name: '', amount: '' }
+const GENERAL_ID = '__general__'
 
 export default function FinancePanel(): JSX.Element {
   const t = useT()
   const savings = useAppStore((s) => s.data?.finance.savings ?? [])
   const checkingBalance = useAppStore((s) => s.data?.finance.checking.balance ?? 0)
+  const checkingCategories = useAppStore((s) => s.data?.finance.checking.categories ?? [])
   const updateData = useAppStore((s) => s.updateData)
 
   const [expanded, setExpanded] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState<RowFormState>(EMPTY_FORM)
-  const [editingChecking, setEditingChecking] = useState(false)
-  const [checkingInput, setCheckingInput] = useState('')
+
+  const [checkingExpanded, setCheckingExpanded] = useState(false)
+  const [editingCheckingId, setEditingCheckingId] = useState<string | null>(null)
+  const [addingChecking, setAddingChecking] = useState(false)
+  const [checkingForm, setCheckingForm] = useState<RowFormState>(EMPTY_FORM)
 
   const total = savings.reduce((sum, e) => sum + e.amount, 0)
-
-  function startEditChecking(): void {
-    setCheckingInput(String(checkingBalance))
-    setEditingChecking(true)
-  }
-
-  function submitChecking(): void {
-    const value = parseFloat(checkingInput.replace(',', '.'))
-    if (Number.isNaN(value)) return
-    updateData((draft) => {
-      draft.finance.checking.balance = value
-    })
-    setEditingChecking(false)
-  }
+  const checkingTotal = checkingBalance + checkingCategories.reduce((sum, c) => sum + c.balance, 0)
 
   function startEdit(entry: SavingsEntry): void {
     setEditingId(entry.id)
@@ -86,34 +78,177 @@ export default function FinancePanel(): JSX.Element {
     })
   }
 
+  function startEditGeneral(): void {
+    setEditingCheckingId(GENERAL_ID)
+    setAddingChecking(false)
+    setCheckingForm({ name: '', amount: String(checkingBalance) })
+  }
+
+  function startEditChecking(entry: CheckingCategory): void {
+    setEditingCheckingId(entry.id)
+    setAddingChecking(false)
+    setCheckingForm({ name: entry.name, amount: String(entry.balance) })
+  }
+
+  function startAddChecking(): void {
+    setAddingChecking(true)
+    setEditingCheckingId(null)
+    setCheckingForm(EMPTY_FORM)
+  }
+
+  function cancelCheckingForm(): void {
+    setEditingCheckingId(null)
+    setAddingChecking(false)
+    setCheckingForm(EMPTY_FORM)
+  }
+
+  function submitCheckingForm(): void {
+    const amount = parseFloat(checkingForm.amount.replace(',', '.'))
+    if (Number.isNaN(amount)) return
+    if (editingCheckingId === GENERAL_ID) {
+      updateData((draft) => {
+        draft.finance.checking.balance = amount
+      })
+      cancelCheckingForm()
+      return
+    }
+    if (!checkingForm.name.trim()) return
+    updateData((draft) => {
+      if (editingCheckingId) {
+        const category = draft.finance.checking.categories.find((c) => c.id === editingCheckingId)
+        if (category) {
+          category.name = checkingForm.name.trim()
+          category.balance = amount
+        }
+      } else {
+        draft.finance.checking.categories.push({
+          id: newId(),
+          name: checkingForm.name.trim(),
+          balance: amount
+        })
+      }
+    })
+    cancelCheckingForm()
+  }
+
+  function removeCheckingCategory(id: string): void {
+    updateData((draft) => {
+      const category = draft.finance.checking.categories.find((c) => c.id === id)
+      if (category) {
+        draft.finance.checking.balance += category.balance
+      }
+      draft.finance.checking.categories = draft.finance.checking.categories.filter((c) => c.id !== id)
+    })
+  }
+
   return (
     <div className="finance-panel">
-      <div className="finance-checking">
-        <span className="finance-label">{t('finance.checkingLabel')}</span>
-        {editingChecking ? (
-          <div className="finance-checking-edit">
-            <input
-              value={checkingInput}
-              onChange={(e) => setCheckingInput(e.target.value)}
-              autoFocus
-              onKeyDown={(e) => e.key === 'Enter' && submitChecking()}
-            />
-            <button type="button" className="icon-btn" onClick={submitChecking}>
-              ✓
+      <button type="button" className="finance-savings-toggle" onClick={() => setCheckingExpanded((v) => !v)}>
+        <span>{t('finance.checkingLabel')}</span>
+        <span className="finance-savings-total">${checkingTotal.toFixed(2)}</span>
+      </button>
+
+      {checkingExpanded && (
+        <div className="finance-savings-list">
+          {editingCheckingId === GENERAL_ID ? (
+            <div className="finance-row finance-row--form">
+              <span className="finance-row-name">{t('finance.categoryGeneralOption')}</span>
+              <input
+                placeholder={t('finance.amountPlaceholder')}
+                value={checkingForm.amount}
+                onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && submitCheckingForm()}
+              />
+              <button type="button" className="icon-btn" onClick={submitCheckingForm}>
+                ✓
+              </button>
+              <button type="button" className="icon-btn" onClick={cancelCheckingForm}>
+                ✕
+              </button>
+            </div>
+          ) : (
+            <div className="finance-row">
+              <span className="finance-row-name">{t('finance.categoryGeneralOption')}</span>
+              <span className="finance-row-amount">${checkingBalance.toFixed(2)}</span>
+              <button type="button" className="icon-btn" onClick={startEditGeneral} title={t('common.edit')}>
+                ✎
+              </button>
+              <span />
+            </div>
+          )}
+
+          {checkingCategories.map((entry) =>
+            editingCheckingId === entry.id ? (
+              <div className="finance-row finance-row--form" key={entry.id}>
+                <input
+                  placeholder={t('common.nameLabel')}
+                  value={checkingForm.name}
+                  onChange={(e) => setCheckingForm({ ...checkingForm, name: e.target.value })}
+                />
+                <input
+                  placeholder={t('finance.amountPlaceholder')}
+                  value={checkingForm.amount}
+                  onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
+                />
+                <button type="button" className="icon-btn" onClick={submitCheckingForm}>
+                  ✓
+                </button>
+                <button type="button" className="icon-btn" onClick={cancelCheckingForm}>
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div className="finance-row" key={entry.id}>
+                <span className="finance-row-name">{entry.name}</span>
+                <span className="finance-row-amount">${entry.balance.toFixed(2)}</span>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => startEditChecking(entry)}
+                  title={t('common.edit')}
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => removeCheckingCategory(entry.id)}
+                  title={t('common.delete')}
+                >
+                  🗑
+                </button>
+              </div>
+            )
+          )}
+
+          {addingChecking ? (
+            <div className="finance-row finance-row--form">
+              <input
+                placeholder={t('common.nameLabel')}
+                value={checkingForm.name}
+                onChange={(e) => setCheckingForm({ ...checkingForm, name: e.target.value })}
+                autoFocus
+              />
+              <input
+                placeholder={t('finance.amountPlaceholder')}
+                value={checkingForm.amount}
+                onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
+              />
+              <button type="button" className="icon-btn" onClick={submitCheckingForm}>
+                ✓
+              </button>
+              <button type="button" className="icon-btn" onClick={cancelCheckingForm}>
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="finance-add-row" onClick={startAddChecking}>
+              +
             </button>
-            <button type="button" className="icon-btn" onClick={() => setEditingChecking(false)}>
-              ✕
-            </button>
-          </div>
-        ) : (
-          <div className="finance-checking-view">
-            <span className="finance-checking-amount">${checkingBalance.toFixed(2)}</span>
-            <button type="button" className="icon-btn" onClick={startEditChecking} title={t('common.edit')}>
-              ✎
-            </button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <button type="button" className="finance-savings-toggle" onClick={() => setExpanded((v) => !v)}>
         <span>{t('finance.savingsLabel')}</span>

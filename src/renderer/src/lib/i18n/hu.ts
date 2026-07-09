@@ -73,6 +73,7 @@ const hu: Record<TranslationKey, string> = {
   'finance.checkingLabel': 'Folyószámla',
   'finance.savingsLabel': 'Megtakarítások',
   'finance.amountPlaceholder': 'Összeg, $',
+  'finance.categoryGeneralOption': 'Kategória nélkül',
 
   'checkin.emoji.terrible': 'Szörnyű',
   'checkin.emoji.bad': 'Nem túl jó',

@@ -14,6 +14,7 @@ export interface CardFormValues {
   energyMental: number
   energyPhysical: number
   money: number
+  checkingCategoryId: string | null
   createdDate: string
   completedDate: string | null
 }
@@ -60,6 +61,7 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
   const t = useT()
   const skills = useAppStore((s) => s.data?.skills ?? [])
   const months = useAppStore((s) => s.data?.kanban.months ?? {})
+  const checkingCategories = useAppStore((s) => s.data?.finance.checking.categories ?? [])
 
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
@@ -75,6 +77,9 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
   const [energyPhysicalAbs, setEnergyPhysicalAbs] = useState(Math.abs(initial?.energyPhysical ?? 0))
   const [moneySign, setMoneySign] = useState<1 | -1>(initial && initial.money > 0 ? 1 : -1)
   const [moneyAbs, setMoneyAbs] = useState(Math.abs(initial?.money ?? 0))
+  const [checkingCategoryId, setCheckingCategoryId] = useState<string | null>(
+    initial?.checkingCategoryId ?? null
+  )
 
   const [createdDate, setCreatedDate] = useState(initial?.createdDate ?? todayISO())
   const [completedDate, setCompletedDate] = useState<string | null>(initial?.completedDate ?? null)
@@ -113,6 +118,7 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
       energyMental: energyMentalSign * (Number(energyMentalAbs) || 0),
       energyPhysical: energyPhysicalSign * (Number(energyPhysicalAbs) || 0),
       money: moneySign * (Number(moneyAbs) || 0),
+      checkingCategoryId,
       createdDate,
       completedDate
     }
@@ -254,6 +260,19 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
               placeholder="$"
             />
           </div>
+          {checkingCategories.length > 0 && (
+            <select
+              value={checkingCategoryId ?? ''}
+              onChange={(e) => setCheckingCategoryId(e.target.value || null)}
+            >
+              <option value="">{t('finance.categoryGeneralOption')}</option>
+              {checkingCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="form-field">

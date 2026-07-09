@@ -73,6 +73,7 @@ const pl: Record<TranslationKey, string> = {
   'finance.checkingLabel': 'Konto rozliczeniowe',
   'finance.savingsLabel': 'Oszczędności',
   'finance.amountPlaceholder': 'Kwota, $',
+  'finance.categoryGeneralOption': 'Bez kategorii',
 
   'checkin.emoji.terrible': 'Okropnie',
   'checkin.emoji.bad': 'Słabo',

@@ -17,6 +17,8 @@ export interface KanbanCard {
   energyPhysical: number
   /** Signed: negative = expense, positive = income. */
   money: number
+  /** Which checking category the money delta applies to; null = the general/uncategorized balance. */
+  checkingCategoryId: string | null
   createdDate: string
   /** The date this activity was/is done — null until completed, editable/backdatable. */
   completedDate: string | null
@@ -54,6 +56,12 @@ export interface SavingsEntry {
   id: string
   name: string
   amount: number
+}
+
+export interface CheckingCategory {
+  id: string
+  name: string
+  balance: number
 }
 
 export interface AvatarInfo {
@@ -102,7 +110,7 @@ export interface UserData {
     lastCheckinDate: string | null
   }
   finance: {
-    checking: { balance: number }
+    checking: { balance: number; categories: CheckingCategory[] }
     savings: SavingsEntry[]
   }
   skills: Skill[]
@@ -148,8 +156,15 @@ export interface TelegramCatalogCard {
   energyMental: number
   energyPhysical: number
   money: number
+  /** Name of the checking category the money delta is tied to; null = general balance. */
+  checkingCategoryName: string | null
   done: boolean
   rewards: TelegramCatalogCardReward[]
+}
+
+export interface TelegramCatalogCheckingCategory {
+  id: string
+  name: string
 }
 
 export interface TelegramCatalogResources {
@@ -165,6 +180,8 @@ export interface TelegramCatalogResources {
 export interface TelegramCatalogPayload {
   skills: TelegramCatalogSkill[]
   columns: TelegramCatalogColumn[]
+  /** Checking-account spending categories, so the bot can offer them when a card carries a money amount. */
+  checkingCategories: TelegramCatalogCheckingCategory[]
   /** Not-done cards in a TODO/PLANNED column this month — "what's left to do". */
   plannedCards: TelegramCatalogCard[]
   /** Cards marked done today — "what got done today". */
@@ -191,6 +208,7 @@ export interface TelegramCreateActionPayload {
   energyMental: number
   energyPhysical: number
   money: number
+  checkingCategoryId: string | null
   createdDate: string
   completedDate: string | null
 }
@@ -208,6 +226,7 @@ export interface TelegramEditActionPayload {
     energyMental: number
     energyPhysical: number
     money: number
+    checkingCategoryId: string | null
     completedDate: string | null
   }>
 }

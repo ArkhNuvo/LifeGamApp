@@ -73,6 +73,7 @@ const ru = {
   'finance.checkingLabel': 'Расчётный счёт',
   'finance.savingsLabel': 'Сбережения',
   'finance.amountPlaceholder': 'Сумма, $',
+  'finance.categoryGeneralOption': 'Без категории',
 
   'checkin.emoji.terrible': 'Совсем никак',
   'checkin.emoji.bad': 'Так себе',

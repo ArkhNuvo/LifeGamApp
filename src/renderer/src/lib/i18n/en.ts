@@ -73,6 +73,7 @@ const en: Record<TranslationKey, string> = {
   'finance.checkingLabel': 'Checking account',
   'finance.savingsLabel': 'Savings',
   'finance.amountPlaceholder': 'Amount, $',
+  'finance.categoryGeneralOption': 'Uncategorized',
 
   'checkin.emoji.terrible': 'Terrible',
   'checkin.emoji.bad': 'Not great',

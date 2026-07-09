@@ -47,6 +47,7 @@ export default function Card({ card, index, columnId, columnStatus, monthKey }: 
       c.energyMental = values.energyMental
       c.energyPhysical = values.energyPhysical
       c.money = values.money
+      c.checkingCategoryId = values.checkingCategoryId
       c.createdDate = values.createdDate
       c.completedDate = values.completedDate
 

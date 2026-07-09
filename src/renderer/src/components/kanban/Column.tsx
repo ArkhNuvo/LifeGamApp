@@ -60,6 +60,7 @@ export default function Column({ column, index, monthKey }: Props): JSX.Element 
         energyMental: values.energyMental,
         energyPhysical: values.energyPhysical,
         money: values.money,
+        checkingCategoryId: values.checkingCategoryId,
         createdDate: values.createdDate,
         completedDate: values.completedDate,
         done: false,

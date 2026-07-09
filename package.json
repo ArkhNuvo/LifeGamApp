@@ -21,7 +21,8 @@
     "publish": {
       "provider": "github",
       "owner": "ArkhNuvo",
-      "repo": "LifeGamApp"
+      "repo": "LifeGamApp",
+      "releaseType": "release"
     },
     "directories": {
       "output": "dist"

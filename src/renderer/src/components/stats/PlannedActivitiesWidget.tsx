@@ -2,16 +2,11 @@ import { useMemo, useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
 import { currentMonthKey, buildMonthOptions, computeMonthsWithActivity } from '../../lib/month'
 import MonthPicker from '../kanban/MonthPicker'
-import type { ColumnStatus } from '../../lib/types'
-
-const STATUS_LABEL: Record<ColumnStatus, string> = {
-  TODO: 'TO DO',
-  PLANNED: 'PLANNED',
-  IN_PROGRESS: 'IN PROCESS',
-  DONE: 'DONE'
-}
+import { STATUS_LABEL_KEYS } from '../kanban/statusLabels'
+import { useT } from '../../lib/i18n/useT'
 
 export default function PlannedActivitiesWidget(): JSX.Element {
+  const t = useT()
   const months = useAppStore((s) => s.data?.kanban.months ?? {})
   const [monthKey, setMonthKey] = useState(currentMonthKey())
   const monthOptions = buildMonthOptions(Object.keys(months))
@@ -36,14 +31,14 @@ export default function PlannedActivitiesWidget(): JSX.Element {
         onChange={setMonthKey}
       />
       {items.length === 0 ? (
-        <div className="widget-empty">Нет запланированных активностей</div>
+        <div className="widget-empty">{t('stats.emptyPlanned')}</div>
       ) : (
         <div className="planned-list">
           {items.map(({ card, status }) => (
             <div className="planned-row" key={card.id}>
               <span className="planned-title">{card.title}</span>
-              <span className="planned-status">{STATUS_LABEL[status]}</span>
-              <span className="planned-date">{card.completedDate ?? 'без даты'}</span>
+              <span className="planned-status">{t(STATUS_LABEL_KEYS[status])}</span>
+              <span className="planned-date">{card.completedDate ?? t('stats.noDate')}</span>
             </div>
           ))}
         </div>

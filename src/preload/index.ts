@@ -1,5 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AuthResult, TelegramAction, TelegramCatalogPayload, UserData } from '../shared/types'
+import type {
+  AuthResult,
+  TelegramAction,
+  TelegramCatalogPayload,
+  UpdateStatus,
+  UserData
+} from '../shared/types'
 
 const api = {
   auth: {
@@ -7,7 +13,13 @@ const api = {
     register: (username: string, password: string): Promise<AuthResult> =>
       ipcRenderer.invoke('auth:register', username, password),
     login: (username: string, password: string): Promise<AuthResult> =>
-      ipcRenderer.invoke('auth:login', username, password)
+      ipcRenderer.invoke('auth:login', username, password),
+    autoLogin: (username: string): Promise<AuthResult> =>
+      ipcRenderer.invoke('auth:autoLogin', username),
+    getRememberedUsername: (): Promise<string | null> =>
+      ipcRenderer.invoke('auth:getRememberedUsername'),
+    setRememberedUsername: (username: string | null): Promise<boolean> =>
+      ipcRenderer.invoke('auth:setRememberedUsername', username)
   },
   data: {
     load: (username: string): Promise<UserData> => ipcRenderer.invoke('data:load', username),
@@ -31,6 +43,15 @@ const api = {
       ipcRenderer.invoke('telegram:fetchPendingActions', apiToken),
     ackActions: (apiToken: string, ids: number[]): Promise<void> =>
       ipcRenderer.invoke('telegram:ackActions', apiToken, ids)
+  },
+  updates: {
+    check: (): Promise<void> => ipcRenderer.invoke('updates:check'),
+    quitAndInstall: (): Promise<void> => ipcRenderer.invoke('updates:quitAndInstall'),
+    onStatus: (callback: (status: UpdateStatus) => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, status: UpdateStatus): void => callback(status)
+      ipcRenderer.on('updates:status', listener)
+      return () => ipcRenderer.removeListener('updates:status', listener)
+    }
   }
 }
 

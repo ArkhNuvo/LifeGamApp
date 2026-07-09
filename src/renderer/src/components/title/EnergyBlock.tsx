@@ -3,9 +3,11 @@ import { useAppStore } from '../../state/useAppStore'
 import EnergyBattery from './EnergyBattery'
 import EnergyBicep from './EnergyBicep'
 import EnergyQuizModal from './EnergyQuizModal'
+import { useT } from '../../lib/i18n/useT'
 import './EnergyBlock.css'
 
 export default function EnergyBlock(): JSX.Element {
+  const t = useT()
   const energy = useAppStore((s) => s.data?.energy)
   const [quizKind, setQuizKind] = useState<'mental' | 'physical' | null>(null)
 
@@ -16,7 +18,7 @@ export default function EnergyBlock(): JSX.Element {
         <button
           type="button"
           className="icon-btn"
-          title="Оценить ментальную энергию"
+          title={t('energyBlock.mentalTooltip')}
           onClick={() => setQuizKind('mental')}
         >
           ✏️
@@ -27,7 +29,7 @@ export default function EnergyBlock(): JSX.Element {
         <button
           type="button"
           className="icon-btn"
-          title="Оценить физическую энергию"
+          title={t('energyBlock.physicalTooltip')}
           onClick={() => setQuizKind('physical')}
         >
           ✏️

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import Cropper, { Area } from 'react-easy-crop'
 import { getCroppedImageDataUrl } from '../../lib/cropImage'
+import { useT } from '../../lib/i18n/useT'
 
 interface Props {
   imageSrc: string
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function AvatarCropModal({ imageSrc, onCancel, onSave }: Props): JSX.Element {
+  const t = useT()
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
@@ -32,11 +34,8 @@ export default function AvatarCropModal({ imageSrc, onCancel, onSave }: Props): 
   return (
     <div className="modal-overlay">
       <div className="modal-card avatar-crop-card">
-        <h2>Настройте аватар</h2>
-        <p className="avatar-crop-hint">
-          Перетаскивайте изображение и меняйте масштаб, чтобы выбрать видимую часть — круг
-          показывает, как аватар будет выглядеть.
-        </p>
+        <h2>{t('avatar.cropTitle')}</h2>
+        <p className="avatar-crop-hint">{t('avatar.cropHint')}</p>
         <div className="avatar-crop-area">
           <Cropper
             image={imageSrc}
@@ -61,10 +60,10 @@ export default function AvatarCropModal({ imageSrc, onCancel, onSave }: Props): 
         />
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onCancel}>
-            Отмена
+            {t('common.cancel')}
           </button>
           <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Сохранение...' : 'Сохранить'}
+            {saving ? t('avatar.saving') : t('common.save')}
           </button>
         </div>
       </div>

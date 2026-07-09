@@ -1,5 +1,7 @@
 import { currentMonthKey } from './month'
 import { todayISO } from './date'
+import { useLanguageStore } from '../state/useLanguageStore'
+import { getLevelProgress } from './xpCurve'
 import type {
   KanbanCard,
   KanbanColumn,
@@ -40,14 +42,19 @@ export function buildCatalogPayload(data: UserData): TelegramCatalogPayload {
   const today = todayISO()
   const plannedCards: TelegramCatalogCard[] = []
   const doneTodayCards: TelegramCatalogCard[] = []
+  const weekCards: TelegramCatalogCard[] = []
   for (const col of sortedColumns) {
     for (const card of col.cards) {
+      const isTodoOrPlanned = col.status === 'TODO' || col.status === 'PLANNED'
       // A card "is for today" if its target/completion date is set to today,
       // or — when no completedDate has been set yet — if it was created today
       // (covers bot-created cards, which default completedDate to null).
       const isForToday = card.completedDate ? card.completedDate === today : card.createdDate === today
-      if (!card.done && (col.status === 'TODO' || col.status === 'PLANNED') && isForToday) {
+      if (!card.done && isTodoOrPlanned && isForToday) {
         plannedCards.push(shapeCard(card, data.skills))
+      }
+      if (!card.done && isTodoOrPlanned) {
+        weekCards.push(shapeCard(card, data.skills))
       }
       if (card.done && card.completedDate === today) {
         doneTodayCards.push(shapeCard(card, data.skills))
@@ -55,7 +62,20 @@ export function buildCatalogPayload(data: UserData): TelegramCatalogPayload {
     }
   }
 
-  return { skills, columns, plannedCards, doneTodayCards }
+  const language = useLanguageStore.getState().language
+
+  const progress = getLevelProgress(data.totalXp)
+  const resources = {
+    displayName: data.profile.displayName ?? data.profile.username,
+    level: progress.level,
+    xpIntoLevel: progress.xpIntoLevel,
+    xpForNextLevel: progress.xpForNextLevel,
+    energyMental: data.energy.mental,
+    energyPhysical: data.energy.physical,
+    checkingBalance: data.finance.checking.balance
+  }
+
+  return { skills, columns, plannedCards, doneTodayCards, weekCards, resources, language }
 }
 
 export interface CardLookupResult {

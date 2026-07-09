@@ -4,8 +4,10 @@ import { useAppStore } from '../../state/useAppStore'
 import { totalSkillXp } from '../../lib/skillXp'
 import { skillXpForMonth } from '../../lib/skillXpByMonth'
 import ScopeSelector, { ALL_TIME_SCOPE } from './ScopeSelector'
+import { useT } from '../../lib/i18n/useT'
 
 export default function SkillsPieWidget(): JSX.Element {
+  const t = useT()
   const skills = useAppStore((s) => s.data?.skills ?? [])
   const months = useAppStore((s) => s.data?.kanban.months ?? {})
   const [scope, setScope] = useState<string>(ALL_TIME_SCOPE)
@@ -25,7 +27,7 @@ export default function SkillsPieWidget(): JSX.Element {
     <div className="widget-with-month">
       <ScopeSelector value={scope} monthOptions={monthOptions} onChange={setScope} />
       {data.length === 0 ? (
-        <div className="widget-empty">Пока нет опыта по навыкам</div>
+        <div className="widget-empty">{t('stats.emptySkillsXp')}</div>
       ) : (
         <ResponsiveContainer width="100%" height={140}>
           <PieChart>

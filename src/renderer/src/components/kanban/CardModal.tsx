@@ -4,6 +4,8 @@ import type { CardLocation } from '../../lib/kanbanMove'
 import type { CardReward, KanbanCard } from '../../lib/types'
 import { formatMonthLabel } from '../../lib/month'
 import { todayISO } from '../../lib/date'
+import { useT, type TFunction } from '../../lib/i18n/useT'
+import type { TranslationKey } from '../../lib/i18n'
 
 export interface CardFormValues {
   title: string
@@ -25,21 +27,29 @@ interface Props {
 
 const UNASSIGNED_OPTION = '__unassigned__'
 
-const XP_TIERS: { label: string; xp: number }[] = [
-  { label: 'Тривиально', xp: 5 },
-  { label: 'Просто', xp: 10 },
-  { label: 'Средне', xp: 20 },
-  { label: 'Сложно', xp: 40 },
-  { label: 'Эпично', xp: 80 }
+const XP_TIERS: { labelKey: TranslationKey; xp: number }[] = [
+  { labelKey: 'kanban.xpTier.trivial', xp: 5 },
+  { labelKey: 'kanban.xpTier.easy', xp: 10 },
+  { labelKey: 'kanban.xpTier.medium', xp: 20 },
+  { labelKey: 'kanban.xpTier.hard', xp: 40 },
+  { labelKey: 'kanban.xpTier.epic', xp: 80 }
 ]
 
-function SignToggle({ sign, onToggle }: { sign: 1 | -1; onToggle: () => void }): JSX.Element {
+function SignToggle({
+  sign,
+  onToggle,
+  t
+}: {
+  sign: 1 | -1
+  onToggle: () => void
+  t: TFunction
+}): JSX.Element {
   return (
     <button
       type="button"
       className={sign < 0 ? 'sign-toggle sign-toggle--minus' : 'sign-toggle sign-toggle--plus'}
       onClick={onToggle}
-      title={sign < 0 ? 'Затраты (нажми, чтобы сделать восстановлением)' : 'Восстановление (нажми, чтобы сделать затратой)'}
+      title={sign < 0 ? t('kanban.costSignTooltip') : t('kanban.restoreSignTooltip')}
     >
       {sign < 0 ? '−' : '+'}
     </button>
@@ -47,6 +57,7 @@ function SignToggle({ sign, onToggle }: { sign: 1 | -1; onToggle: () => void }):
 }
 
 export default function CardModal({ initial, currentLocation, onCancel, onSave }: Props): JSX.Element {
+  const t = useT()
   const skills = useAppStore((s) => s.data?.skills ?? [])
   const months = useAppStore((s) => s.data?.kanban.months ?? {})
 
@@ -122,24 +133,24 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
   return (
     <div className="modal-overlay">
       <div className="modal-card">
-        <h2>{initial ? 'Редактировать активность' : 'Новая активность'}</h2>
+        <h2>{initial ? t('kanban.editCardTitle') : t('kanban.newCardTitle')}</h2>
         <div className="form-field">
-          <label>Название</label>
+          <label>{t('common.nameLabel')}</label>
           <input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
         </div>
 
         <div className="form-field">
-          <label>Описание</label>
+          <label>{t('kanban.descriptionLabel')}</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            placeholder="Необязательно — видно только при открытии карточки"
+            placeholder={t('kanban.descriptionPlaceholder')}
           />
         </div>
 
         <div className="form-field">
-          <label>Награда (опыт по навыкам)</label>
+          <label>{t('kanban.rewardLabel')}</label>
           {rewards.map((reward, i) => {
             const skill = skills.find((s) => s.id === reward.skillId)
             return (
@@ -149,7 +160,7 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
                     value={reward.skillId}
                     onChange={(e) => updateReward(i, { skillId: e.target.value, subskillId: null })}
                   >
-                    <option value="">— навык —</option>
+                    <option value="">{t('kanban.rewardSkillPlaceholder')}</option>
                     {skills.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
@@ -161,7 +172,7 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
                       value={reward.subskillId ?? ''}
                       onChange={(e) => updateReward(i, { subskillId: e.target.value || null })}
                     >
-                      <option value="">— общий опыт —</option>
+                      <option value="">{t('kanban.rewardSubskillPlaceholder')}</option>
                       {skill.subskills.map((sub) => (
                         <option key={sub.id} value={sub.id}>
                           {sub.name}
@@ -174,7 +185,7 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
                     min={0}
                     value={reward.xp}
                     onChange={(e) => updateReward(i, { xp: Number(e.target.value) })}
-                    placeholder="XP"
+                    placeholder={t('kanban.rewardXpPlaceholder')}
                   />
                   <button type="button" className="icon-btn" onClick={() => removeReward(i)}>
                     ×
@@ -183,13 +194,13 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
                 <div className="reward-tiers">
                   {XP_TIERS.map((tier) => (
                     <button
-                      key={tier.label}
+                      key={tier.labelKey}
                       type="button"
                       className={reward.xp === tier.xp ? 'tier-btn active' : 'tier-btn'}
                       onClick={() => updateReward(i, { xp: tier.xp })}
                       title={`${tier.xp} XP`}
                     >
-                      {tier.label}
+                      {t(tier.labelKey)}
                     </button>
                   ))}
                 </div>
@@ -197,14 +208,14 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
             )
           })}
           <button type="button" className="reward-add-btn" onClick={addReward}>
-            + добавить навык
+            {t('kanban.rewardAddButton')}
           </button>
         </div>
 
         <div className="form-field">
-          <label>Ментальная энергия</label>
+          <label>{t('kanban.mentalEnergyLabel')}</label>
           <div className="signed-field-row">
-            <SignToggle sign={energyMentalSign} onToggle={() => setEnergyMentalSign((s) => (s === 1 ? -1 : 1))} />
+            <SignToggle sign={energyMentalSign} onToggle={() => setEnergyMentalSign((s) => (s === 1 ? -1 : 1))} t={t} />
             <input
               type="number"
               min={0}
@@ -215,11 +226,12 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
           </div>
         </div>
         <div className="form-field">
-          <label>Физическая энергия</label>
+          <label>{t('kanban.physicalEnergyLabel')}</label>
           <div className="signed-field-row">
             <SignToggle
               sign={energyPhysicalSign}
               onToggle={() => setEnergyPhysicalSign((s) => (s === 1 ? -1 : 1))}
+              t={t}
             />
             <input
               type="number"
@@ -231,9 +243,9 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
           </div>
         </div>
         <div className="form-field">
-          <label>Деньги</label>
+          <label>{t('kanban.moneyLabel')}</label>
           <div className="signed-field-row">
-            <SignToggle sign={moneySign} onToggle={() => setMoneySign((s) => (s === 1 ? -1 : 1))} />
+            <SignToggle sign={moneySign} onToggle={() => setMoneySign((s) => (s === 1 ? -1 : 1))} t={t} />
             <input
               type="number"
               min={0}
@@ -245,36 +257,39 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
         </div>
 
         <div className="form-field">
-          <label>Дата создания</label>
+          <label>{t('kanban.createdDateLabel')}</label>
           <input type="date" value={createdDate} onChange={(e) => setCreatedDate(e.target.value)} />
         </div>
         <div className="form-field">
-          <label>Дата завершения</label>
+          <label>{t('kanban.completedDateLabel')}</label>
           {completedDate === null ? (
             <div className="signed-field-row">
               <span className="field-hint" style={{ margin: 0 }}>
-                Не указана — заполнится сама, когда отметишь активность выполненной
+                {t('kanban.completedDateEmptyHint')}
               </span>
               <button type="button" className="btn" onClick={() => setCompletedDate(todayISO())}>
-                Указать дату
+                {t('kanban.setDateButton')}
               </button>
             </div>
           ) : (
             <div className="signed-field-row">
               <input type="date" value={completedDate} onChange={(e) => setCompletedDate(e.target.value)} />
-              <button type="button" className="icon-btn" onClick={() => setCompletedDate(null)} title="Убрать дату">
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setCompletedDate(null)}
+                title={t('kanban.clearDateTooltip')}
+              >
                 ×
               </button>
             </div>
           )}
-          <span className="field-hint">
-            Если дата не сегодняшняя — затраты/восстановление энергии не повлияют на текущий баланс энергии.
-          </span>
+          <span className="field-hint">{t('kanban.completedDateHint')}</span>
         </div>
 
         {currentLocation && (
           <div className="form-field">
-            <label>Перенести в</label>
+            <label>{t('kanban.moveToLabel')}</label>
             <div className="reward-row">
               <select
                 value={targetMonthKey}
@@ -287,10 +302,10 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
                   setTargetColumnId(cols[0]?.id ?? '')
                 }}
               >
-                <option value={UNASSIGNED_OPTION}>— без канбана —</option>
+                <option value={UNASSIGNED_OPTION}>{t('kanban.unassignedOption')}</option>
                 {monthOptions.map((key) => (
                   <option key={key} value={key}>
-                    {formatMonthLabel(key)}
+                    {formatMonthLabel(key, t)}
                   </option>
                 ))}
               </select>
@@ -309,10 +324,10 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
 
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onCancel}>
-            Отмена
+            {t('common.cancel')}
           </button>
           <button type="button" className="btn btn-primary" onClick={submit}>
-            Сохранить
+            {t('common.save')}
           </button>
         </div>
       </div>

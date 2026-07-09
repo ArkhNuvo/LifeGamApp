@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '../../lib/i18n/useT'
 
 interface Props {
   title: string
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function NameModal({ title, label, initialValue, onCancel, onSave }: Props): JSX.Element {
+  const t = useT()
   const [name, setName] = useState(initialValue ?? '')
 
   function submit(): void {
@@ -31,10 +33,10 @@ export default function NameModal({ title, label, initialValue, onCancel, onSave
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onCancel}>
-            Отмена
+            {t('common.cancel')}
           </button>
           <button type="button" className="btn btn-primary" onClick={submit}>
-            Сохранить
+            {t('common.save')}
           </button>
         </div>
       </div>

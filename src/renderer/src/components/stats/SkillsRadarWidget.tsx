@@ -12,8 +12,10 @@ import { useAppStore } from '../../state/useAppStore'
 import { totalSkillXp } from '../../lib/skillXp'
 import { skillXpForMonth } from '../../lib/skillXpByMonth'
 import ScopeSelector, { ALL_TIME_SCOPE } from './ScopeSelector'
+import { useT } from '../../lib/i18n/useT'
 
 export default function SkillsRadarWidget(): JSX.Element {
+  const t = useT()
   const skills = useAppStore((s) => s.data?.skills ?? [])
   const months = useAppStore((s) => s.data?.kanban.months ?? {})
   const [scope, setScope] = useState<string>(ALL_TIME_SCOPE)
@@ -30,7 +32,7 @@ export default function SkillsRadarWidget(): JSX.Element {
     <div className="widget-with-month">
       <ScopeSelector value={scope} monthOptions={monthOptions} onChange={setScope} />
       {data.length < 3 ? (
-        <div className="widget-empty">Добавь хотя бы 3 навыка, чтобы увидеть розу ветров</div>
+        <div className="widget-empty">{t('stats.emptyRadarNeed3')}</div>
       ) : (
         <ResponsiveContainer width="100%" height={150}>
           <RadarChart data={data} outerRadius="70%">

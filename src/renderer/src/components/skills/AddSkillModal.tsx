@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '../../lib/i18n/useT'
 
 interface Props {
   initialName?: string
@@ -10,6 +11,7 @@ interface Props {
 const DEFAULT_COLORS = ['#7c5cff', '#34d1a0', '#ffb454', '#ff5c72', '#4ea1ff', '#f068c6']
 
 export default function AddSkillModal({ initialName, initialColor, onCancel, onSave }: Props): JSX.Element {
+  const t = useT()
   const [name, setName] = useState(initialName ?? '')
   const [color, setColor] = useState(initialColor ?? DEFAULT_COLORS[0])
 
@@ -21,13 +23,13 @@ export default function AddSkillModal({ initialName, initialColor, onCancel, onS
   return (
     <div className="modal-overlay">
       <div className="modal-card">
-        <h2>{initialName ? 'Редактировать навык' : 'Новый навык'}</h2>
+        <h2>{initialName ? t('skills.editSkillTitle') : t('skills.newSkillTitle')}</h2>
         <div className="form-field">
-          <label>Название</label>
+          <label>{t('common.nameLabel')}</label>
           <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
         </div>
         <div className="form-field">
-          <label>Цвет шкалы опыта</label>
+          <label>{t('skills.colorLabel')}</label>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
             <div style={{ display: 'flex', gap: 6 }}>
@@ -50,10 +52,10 @@ export default function AddSkillModal({ initialName, initialColor, onCancel, onS
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onCancel}>
-            Отмена
+            {t('common.cancel')}
           </button>
           <button type="button" className="btn btn-primary" onClick={submit}>
-            {initialName ? 'Сохранить' : 'Добавить'}
+            {initialName ? t('common.save') : t('common.add')}
           </button>
         </div>
       </div>

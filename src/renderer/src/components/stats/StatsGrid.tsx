@@ -8,18 +8,21 @@ import PlannedActivitiesWidget from './PlannedActivitiesWidget'
 import SkillsRadarWidget from './SkillsRadarWidget'
 import MissedActivitiesWidget from './MissedActivitiesWidget'
 import SkillTrendWidget from './SkillTrendWidget'
+import { useT } from '../../lib/i18n/useT'
+import type { TranslationKey } from '../../lib/i18n'
 import './StatsGrid.css'
 
-const WIDGET_LABEL: Record<StatsWidgetType, string> = {
-  skillsPie: 'Опыт по навыкам',
-  statusBreakdown: 'Соотношение по статусам',
-  plannedActivities: 'Запланированные активности',
-  skillsRadar: 'Роза ветров по навыкам',
-  missedActivities: 'Пропущенные активности',
-  skillsTrend: 'Динамика опыта по навыкам'
+const WIDGET_LABEL_KEYS: Record<StatsWidgetType, TranslationKey> = {
+  skillsPie: 'stats.widget.skillsPie',
+  statusBreakdown: 'stats.widget.statusBreakdown',
+  plannedActivities: 'stats.widget.plannedActivities',
+  skillsRadar: 'stats.widget.skillsRadar',
+  missedActivities: 'stats.widget.missedActivities',
+  skillsTrend: 'stats.widget.skillsTrend'
 }
 
 export default function StatsGrid(): JSX.Element {
+  const t = useT()
   const widgets = useAppStore((s) => s.data?.stats.widgets ?? [])
   const updateData = useAppStore((s) => s.updateData)
   const [addingType, setAddingType] = useState<StatsWidgetType | ''>('')
@@ -53,13 +56,13 @@ export default function StatsGrid(): JSX.Element {
           key={widget.id}
         >
           <div className="stats-cell-header">
-            <span>{WIDGET_LABEL[widget.type]}</span>
+            <span>{t(WIDGET_LABEL_KEYS[widget.type])}</span>
             <div className="stats-cell-header-actions">
               <button
                 type="button"
                 className="icon-btn"
                 onClick={() => toggleSize(widget.id)}
-                title={widget.size === 'wide' ? 'Свернуть до одной ячейки' : 'Растянуть на две ячейки'}
+                title={widget.size === 'wide' ? t('stats.collapseTooltip') : t('stats.expandTooltip')}
               >
                 {widget.size === 'wide' ? '⇤⇥' : '⇥⇤'}
               </button>
@@ -67,7 +70,7 @@ export default function StatsGrid(): JSX.Element {
                 type="button"
                 className="icon-btn"
                 onClick={() => removeWidget(widget.id)}
-                title="Удалить виджет"
+                title={t('stats.removeWidgetTooltip')}
               >
                 ×
               </button>
@@ -86,15 +89,15 @@ export default function StatsGrid(): JSX.Element {
 
       <div className="stats-cell stats-cell--add">
         <select value={addingType} onChange={(e) => setAddingType(e.target.value as StatsWidgetType | '')}>
-          <option value="">— выбрать виджет —</option>
-          {(Object.keys(WIDGET_LABEL) as StatsWidgetType[]).map((type) => (
+          <option value="">{t('stats.selectWidgetPlaceholder')}</option>
+          {(Object.keys(WIDGET_LABEL_KEYS) as StatsWidgetType[]).map((type) => (
             <option key={type} value={type}>
-              {WIDGET_LABEL[type]}
+              {t(WIDGET_LABEL_KEYS[type])}
             </option>
           ))}
         </select>
         <button type="button" className="btn btn-primary" onClick={addWidget} disabled={!addingType}>
-          + Добавить
+          {t('stats.addWidgetButton')}
         </button>
       </div>
     </div>

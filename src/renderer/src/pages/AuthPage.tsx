@@ -1,11 +1,16 @@
 import { FormEvent, useState } from 'react'
 import { useAppStore } from '../state/useAppStore'
+import LanguageSwitcher from '../components/common/LanguageSwitcher'
+import { useT } from '../lib/i18n/useT'
+import type { TranslationKey } from '../lib/i18n'
 import './AuthPage.css'
 
 export default function AuthPage(): JSX.Element {
+  const t = useT()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(false)
   const login = useAppStore((s) => s.login)
   const register = useAppStore((s) => s.register)
   const status = useAppStore((s) => s.status)
@@ -14,17 +19,20 @@ export default function AuthPage(): JSX.Element {
   async function handleSubmit(e: FormEvent): Promise<void> {
     e.preventDefault()
     if (mode === 'login') {
-      await login(username, password)
+      await login(username, password, remember)
     } else {
-      await register(username, password)
+      await register(username, password, remember)
     }
   }
 
   return (
     <div className="auth-page">
       <div className="auth-card">
+        <div className="auth-language-corner">
+          <LanguageSwitcher />
+        </div>
         <h1 className="auth-title">LifeGam</h1>
-        <p className="auth-subtitle">Геймификация твоей жизни</p>
+        <p className="auth-subtitle">{t('auth.subtitle')}</p>
 
         <div className="auth-tabs">
           <button
@@ -32,20 +40,20 @@ export default function AuthPage(): JSX.Element {
             onClick={() => setMode('login')}
             type="button"
           >
-            Вход
+            {t('auth.tabLogin')}
           </button>
           <button
             className={mode === 'register' ? 'auth-tab active' : 'auth-tab'}
             onClick={() => setMode('register')}
             type="button"
           >
-            Регистрация
+            {t('auth.tabRegister')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <label>
-            Имя пользователя
+            {t('auth.usernameLabel')}
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -54,7 +62,7 @@ export default function AuthPage(): JSX.Element {
             />
           </label>
           <label>
-            Пароль
+            {t('auth.passwordLabel')}
             <input
               type="password"
               value={password}
@@ -62,9 +70,21 @@ export default function AuthPage(): JSX.Element {
               required
             />
           </label>
-          {error && <div className="auth-error">{error}</div>}
+          <label className="auth-remember">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
+            {t('auth.rememberMe')}
+          </label>
+          {error && <div className="auth-error">{t(`auth.error.${error}` as TranslationKey)}</div>}
           <button type="submit" className="auth-submit" disabled={status === 'loading'}>
-            {status === 'loading' ? '...' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}
+            {status === 'loading'
+              ? t('auth.submitLoading')
+              : mode === 'login'
+                ? t('auth.submitLogin')
+                : t('auth.submitRegister')}
           </button>
         </form>
       </div>

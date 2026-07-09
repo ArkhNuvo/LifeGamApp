@@ -6,9 +6,11 @@ import { revertCardEffects } from '../../lib/kanbanXp'
 import { moveCardTo, type CardLocation } from '../../lib/kanbanMove'
 import CardModal, { CardFormValues } from './CardModal'
 import AssignCardModal from './AssignCardModal'
+import { useT } from '../../lib/i18n/useT'
 import './Kanban.css'
 
 export default function UnassignedStrip(): JSX.Element {
+  const t = useT()
   const cards = useAppStore((s) => s.data?.kanban.unassigned ?? [])
   const skills = useAppStore((s) => s.data?.skills ?? [])
   const updateData = useAppStore((s) => s.updateData)
@@ -66,7 +68,7 @@ export default function UnassignedStrip(): JSX.Element {
 
   return (
     <div className="unassigned-strip">
-      <div className="unassigned-strip-header">Активности вне канбана</div>
+      <div className="unassigned-strip-header">{t('kanban.unassignedHeader')}</div>
       <Droppable droppableId="unassigned" type="CARD" direction="horizontal">
         {(provided) => (
           <div className="unassigned-strip-list" ref={provided.innerRef} {...provided.droppableProps}>
@@ -92,7 +94,7 @@ export default function UnassignedStrip(): JSX.Element {
                       <button
                         type="button"
                         className="icon-btn"
-                        title="Перенести в канбан"
+                        title={t('kanban.assignToKanbanTooltip')}
                         onClick={() => setAssigningId(card.id)}
                       >
                         📌
@@ -100,12 +102,12 @@ export default function UnassignedStrip(): JSX.Element {
                       <button
                         type="button"
                         className="icon-btn"
-                        title="Редактировать"
+                        title={t('common.edit')}
                         onClick={() => setEditingId(card.id)}
                       >
                         ✎
                       </button>
-                      <button type="button" className="icon-btn" title="Удалить" onClick={() => deleteCard(card.id)}>
+                      <button type="button" className="icon-btn" title={t('common.delete')} onClick={() => deleteCard(card.id)}>
                         🗑
                       </button>
                       {editingId === card.id && (
@@ -130,7 +132,7 @@ export default function UnassignedStrip(): JSX.Element {
             })}
             {provided.placeholder}
             <button type="button" className="unassigned-add-btn" onClick={() => setCreating(true)}>
-              + Добавить активность
+              {t('kanban.unassignedAddButton')}
             </button>
           </div>
         )}

@@ -5,6 +5,8 @@ import { syncCardDoneState, revertCardEffects } from '../../lib/kanbanXp'
 import { moveCardTo, type CardLocation } from '../../lib/kanbanMove'
 import type { ColumnStatus, KanbanCard } from '../../lib/types'
 import CardModal, { CardFormValues } from './CardModal'
+import { useT } from '../../lib/i18n/useT'
+import { STATUS_LABEL_KEYS } from './statusLabels'
 
 interface Props {
   card: KanbanCard
@@ -14,18 +16,12 @@ interface Props {
   monthKey: string
 }
 
-const STATUS_LABEL: Record<ColumnStatus, string> = {
-  TODO: 'TO DO',
-  PLANNED: 'PLANNED',
-  IN_PROGRESS: 'IN PROCESS',
-  DONE: 'DONE'
-}
-
 function signed(n: number): string {
   return n > 0 ? `+${n}` : `${n}`
 }
 
 export default function Card({ card, index, columnId, columnStatus, monthKey }: Props): JSX.Element {
+  const t = useT()
   const updateData = useAppStore((s) => s.updateData)
   const skills = useAppStore((s) => s.data?.skills ?? [])
   const [editing, setEditing] = useState(false)
@@ -90,18 +86,18 @@ export default function Card({ card, index, columnId, columnStatus, monthKey }: 
               checked={card.done}
               disabled={columnStatus !== 'DONE'}
               onChange={toggleDone}
-              title={columnStatus === 'DONE' ? 'Отметить выполненной' : 'Доступно только в колонке DONE'}
+              title={columnStatus === 'DONE' ? t('kanban.markDoneTooltip') : t('kanban.onlyInDoneTooltip')}
             />
             <span className="kanban-card-title">{card.title}</span>
-            <button type="button" className="icon-btn" onClick={() => setEditing(true)} title="Редактировать">
+            <button type="button" className="icon-btn" onClick={() => setEditing(true)} title={t('common.edit')}>
               ✎
             </button>
-            <button type="button" className="icon-btn" onClick={deleteCard} title="Удалить">
+            <button type="button" className="icon-btn" onClick={deleteCard} title={t('common.delete')}>
               🗑
             </button>
           </div>
           <div className="kanban-card-meta">
-            <span className="kanban-card-status">{STATUS_LABEL[card.done ? 'DONE' : columnStatus]}</span>
+            <span className="kanban-card-status">{t(STATUS_LABEL_KEYS[card.done ? 'DONE' : columnStatus])}</span>
             {card.completedDate && <span className="kanban-card-due">{card.completedDate}</span>}
           </div>
           {card.rewards.length > 0 && (

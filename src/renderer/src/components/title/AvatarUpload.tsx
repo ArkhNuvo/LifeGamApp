@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
 import AvatarCropModal from './AvatarCropModal'
+import { useT } from '../../lib/i18n/useT'
 import './AvatarUpload.css'
 
 export default function AvatarUpload(): JSX.Element {
+  const t = useT()
   const username = useAppStore((s) => s.username)
   const avatarFile = useAppStore((s) => s.data?.profile.avatar.file)
   const updateData = useAppStore((s) => s.updateData)
@@ -42,9 +44,9 @@ export default function AvatarUpload(): JSX.Element {
 
   return (
     <>
-      <button type="button" className="avatar-upload" onClick={handleClick} title="Изменить аватар">
+      <button type="button" className="avatar-upload" onClick={handleClick} title={t('avatar.changeTooltip')}>
         {avatarDataUrl ? (
-          <img src={avatarDataUrl} alt="Аватар" className="avatar-img" />
+          <img src={avatarDataUrl} alt={t('avatar.altText')} className="avatar-img" />
         ) : (
           <span className="avatar-placeholder">+</span>
         )}

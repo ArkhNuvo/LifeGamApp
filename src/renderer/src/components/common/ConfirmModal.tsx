@@ -1,3 +1,5 @@
+import { useT } from '../../lib/i18n/useT'
+
 interface Props {
   message: string
   onConfirm: () => void
@@ -5,16 +7,17 @@ interface Props {
 }
 
 export default function ConfirmModal({ message, onConfirm, onCancel }: Props): JSX.Element {
+  const t = useT()
   return (
     <div className="modal-overlay">
       <div className="modal-card">
         <p>{message}</p>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onCancel}>
-            Нет
+            {t('common.no')}
           </button>
           <button type="button" className="btn btn-danger" onClick={onConfirm}>
-            Да
+            {t('common.yes')}
           </button>
         </div>
       </div>

@@ -77,11 +77,22 @@ export interface StatsWidgetConfig {
   size: 'normal' | 'wide'
 }
 
-export type ThemeName = 'violetAmber' | 'blueOrange' | 'pinkLime' | 'tealCoral'
+export type ThemeName =
+  | 'violetAmber'
+  | 'blueOrange'
+  | 'pinkLime'
+  | 'tealCoral'
+  | 'crimsonGold'
+  | 'emeraldViolet'
+  | 'indigoPeach'
+  | 'slateAmber'
+export type ColorMode = 'light' | 'dark'
 
 export interface UserData {
   profile: {
     username: string
+    /** Cosmetic display name shown in the UI; null means "use the login/username". */
+    displayName: string | null
     avatar: AvatarInfo
   }
   totalXp: number
@@ -104,6 +115,7 @@ export interface UserData {
     widgets: StatsWidgetConfig[]
   }
   theme: ThemeName
+  colorMode: ColorMode
   telegram: {
     apiToken: string | null
   }
@@ -140,6 +152,16 @@ export interface TelegramCatalogCard {
   rewards: TelegramCatalogCardReward[]
 }
 
+export interface TelegramCatalogResources {
+  displayName: string
+  level: number
+  xpIntoLevel: number
+  xpForNextLevel: number
+  energyMental: number
+  energyPhysical: number
+  checkingBalance: number
+}
+
 export interface TelegramCatalogPayload {
   skills: TelegramCatalogSkill[]
   columns: TelegramCatalogColumn[]
@@ -147,6 +169,12 @@ export interface TelegramCatalogPayload {
   plannedCards: TelegramCatalogCard[]
   /** Cards marked done today — "what got done today". */
   doneTodayCards: TelegramCatalogCard[]
+  /** Every not-done TODO/PLANNED card this month, regardless of date — the bot's "/week" view. */
+  weekCards: TelegramCatalogCard[]
+  /** Profile summary for the bot's "Resources" command. */
+  resources: TelegramCatalogResources
+  /** The app's current UI language, so the bot can reply in the same language. */
+  language: string
 }
 
 export type TelegramActionTarget =
@@ -205,3 +233,12 @@ export interface AuthResult {
   error?: string
   username?: string
 }
+
+export type UpdateStatus =
+  | { state: 'checking' }
+  | { state: 'not-available' }
+  | { state: 'available'; version: string }
+  | { state: 'downloading'; percent: number }
+  | { state: 'downloaded'; version: string }
+  | { state: 'error'; message: string }
+  | { state: 'dev-unavailable' }

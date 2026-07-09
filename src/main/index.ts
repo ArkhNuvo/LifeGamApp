@@ -5,12 +5,16 @@ import {
   listUsernames,
   registerUser,
   loginUser,
+  autoLoginUser,
+  getRememberedUsername,
+  setRememberedUsername,
   loadUserData,
   saveUserData,
   saveAvatarDataUrl,
   readFileAsDataUrl
 } from './storage'
 import * as telegram from './telegram'
+import { initUpdater, checkForUpdates, quitAndInstall } from './updater'
 import type { TelegramCatalogPayload, UserData } from '../shared/types'
 
 function createWindow(): void {
@@ -34,6 +38,8 @@ function createWindow(): void {
     mainWindow.show()
   })
 
+  initUpdater(mainWindow)
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
@@ -54,6 +60,12 @@ function registerIpcHandlers(): void {
   ipcMain.handle('auth:login', (_e, username: string, password: string) =>
     loginUser(username, password)
   )
+  ipcMain.handle('auth:autoLogin', (_e, username: string) => autoLoginUser(username))
+  ipcMain.handle('auth:getRememberedUsername', () => getRememberedUsername())
+  ipcMain.handle('auth:setRememberedUsername', (_e, username: string | null) => {
+    setRememberedUsername(username)
+    return true
+  })
   ipcMain.handle('data:load', (_e, username: string) => loadUserData(username))
   ipcMain.handle('data:save', (_e, username: string, data: UserData) => {
     saveUserData(username, data)
@@ -83,6 +95,9 @@ function registerIpcHandlers(): void {
   ipcMain.handle('telegram:ackActions', (_e, apiToken: string, ids: number[]) =>
     telegram.ackActions(apiToken, ids)
   )
+
+  ipcMain.handle('updates:check', () => checkForUpdates())
+  ipcMain.handle('updates:quitAndInstall', () => quitAndInstall())
 }
 
 app.whenReady().then(() => {

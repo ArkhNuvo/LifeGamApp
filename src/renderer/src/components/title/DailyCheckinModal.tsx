@@ -1,23 +1,26 @@
 import { useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
 import { todayISO } from '../../lib/date'
+import { useT } from '../../lib/i18n/useT'
+import type { TranslationKey } from '../../lib/i18n'
 import './DailyCheckinModal.css'
 
 interface Props {
   onClose: () => void
 }
 
-const EMOJI_OPTIONS: { emoji: string; value: number; label: string }[] = [
-  { emoji: '😩', value: 0, label: 'Совсем никак' },
-  { emoji: '😕', value: 25, label: 'Так себе' },
-  { emoji: '😐', value: 50, label: 'Средне' },
-  { emoji: '🙂', value: 75, label: 'Хорошо' },
-  { emoji: '😄', value: 100, label: 'Отлично' }
+const EMOJI_OPTIONS: { emoji: string; value: number; labelKey: TranslationKey }[] = [
+  { emoji: '😩', value: 0, labelKey: 'checkin.emoji.terrible' },
+  { emoji: '😕', value: 25, labelKey: 'checkin.emoji.bad' },
+  { emoji: '😐', value: 50, labelKey: 'checkin.emoji.ok' },
+  { emoji: '🙂', value: 75, labelKey: 'checkin.emoji.good' },
+  { emoji: '😄', value: 100, labelKey: 'checkin.emoji.great' }
 ]
 
 type Step = 'mental' | 'physical'
 
 export default function DailyCheckinModal({ onClose }: Props): JSX.Element {
+  const t = useT()
   const updateData = useAppStore((s) => s.updateData)
   const [step, setStep] = useState<Step>('mental')
 
@@ -47,8 +50,8 @@ export default function DailyCheckinModal({ onClose }: Props): JSX.Element {
   return (
     <div className="modal-overlay">
       <div className="modal-card checkin-card">
-        <div className="checkin-step-indicator">Шаг {step === 'mental' ? 1 : 2} из 2</div>
-        <h2>{step === 'mental' ? 'Как твоя ментальная энергия сегодня?' : 'Как твоя физическая энергия сегодня?'}</h2>
+        <div className="checkin-step-indicator">{t('checkin.step', { step: step === 'mental' ? 1 : 2 })}</div>
+        <h2>{step === 'mental' ? t('checkin.questionMental') : t('checkin.questionPhysical')}</h2>
         <div className="checkin-emojis">
           {EMOJI_OPTIONS.map((o) => (
             <button
@@ -56,16 +59,16 @@ export default function DailyCheckinModal({ onClose }: Props): JSX.Element {
               type="button"
               className="checkin-emoji-btn"
               onClick={() => pick(o.value)}
-              title={o.label}
+              title={t(o.labelKey)}
             >
               <span className="checkin-emoji">{o.emoji}</span>
-              <span className="checkin-emoji-label">{o.label}</span>
+              <span className="checkin-emoji-label">{t(o.labelKey)}</span>
             </button>
           ))}
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={skip}>
-            Пропустить
+            {t('checkin.skip')}
           </button>
         </div>
       </div>

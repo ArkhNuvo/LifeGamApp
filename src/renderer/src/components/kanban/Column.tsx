@@ -8,6 +8,8 @@ import Card from './Card'
 import ColumnModal from './ColumnModal'
 import CardModal, { CardFormValues } from './CardModal'
 import ConfirmModal from '../common/ConfirmModal'
+import { useT } from '../../lib/i18n/useT'
+import { STATUS_LABEL_KEYS } from './statusLabels'
 
 interface Props {
   column: KanbanColumn
@@ -15,14 +17,8 @@ interface Props {
   monthKey: string
 }
 
-const STATUS_LABEL: Record<ColumnStatus, string> = {
-  TODO: 'TO DO',
-  PLANNED: 'PLANNED',
-  IN_PROGRESS: 'IN PROCESS',
-  DONE: 'DONE'
-}
-
 export default function Column({ column, index, monthKey }: Props): JSX.Element {
+  const t = useT()
   const updateData = useAppStore((s) => s.updateData)
   const [editing, setEditing] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -83,16 +79,16 @@ export default function Column({ column, index, monthKey }: Props): JSX.Element 
         <div className="kanban-column" ref={provided.innerRef} {...provided.draggableProps}>
           <div className="kanban-column-header" {...provided.dragHandleProps}>
             <span className="kanban-column-name">{column.name}</span>
-            <span className="kanban-column-status">{STATUS_LABEL[column.status]}</span>
+            <span className="kanban-column-status">{t(STATUS_LABEL_KEYS[column.status])}</span>
             <div className="kanban-column-actions">
-              <button type="button" className="icon-btn" onClick={() => setEditing(true)} title="Редактировать">
+              <button type="button" className="icon-btn" onClick={() => setEditing(true)} title={t('common.edit')}>
                 ✎
               </button>
               <button
                 type="button"
                 className="icon-btn"
                 onClick={() => setConfirmingDelete(true)}
-                title="Удалить колонку"
+                title={t('kanban.deleteColumnTooltip')}
               >
                 🗑
               </button>
@@ -118,7 +114,7 @@ export default function Column({ column, index, monthKey }: Props): JSX.Element 
           </Droppable>
 
           <button type="button" className="kanban-create-card-btn" onClick={() => setCreatingCard(true)}>
-            + Создать активность
+            {t('kanban.createCardButton')}
           </button>
 
           {editing && (
@@ -131,7 +127,7 @@ export default function Column({ column, index, monthKey }: Props): JSX.Element 
           )}
           {confirmingDelete && (
             <ConfirmModal
-              message={`Удалить колонку "${column.name}" вместе со всеми карточками?`}
+              message={t('kanban.deleteColumnConfirm', { name: column.name })}
               onConfirm={deleteColumn}
               onCancel={() => setConfirmingDelete(false)}
             />

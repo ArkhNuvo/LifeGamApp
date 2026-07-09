@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
 import { newId } from '../../lib/ids'
 import type { SavingsEntry } from '../../lib/types'
+import { useT } from '../../lib/i18n/useT'
 import './FinancePanel.css'
 
 interface RowFormState {
@@ -12,6 +13,7 @@ interface RowFormState {
 const EMPTY_FORM: RowFormState = { name: '', amount: '' }
 
 export default function FinancePanel(): JSX.Element {
+  const t = useT()
   const savings = useAppStore((s) => s.data?.finance.savings ?? [])
   const checkingBalance = useAppStore((s) => s.data?.finance.checking.balance ?? 0)
   const updateData = useAppStore((s) => s.updateData)
@@ -87,7 +89,7 @@ export default function FinancePanel(): JSX.Element {
   return (
     <div className="finance-panel">
       <div className="finance-checking">
-        <span className="finance-label">Расчётный счёт</span>
+        <span className="finance-label">{t('finance.checkingLabel')}</span>
         {editingChecking ? (
           <div className="finance-checking-edit">
             <input
@@ -106,7 +108,7 @@ export default function FinancePanel(): JSX.Element {
         ) : (
           <div className="finance-checking-view">
             <span className="finance-checking-amount">${checkingBalance.toFixed(2)}</span>
-            <button type="button" className="icon-btn" onClick={startEditChecking} title="Редактировать">
+            <button type="button" className="icon-btn" onClick={startEditChecking} title={t('common.edit')}>
               ✎
             </button>
           </div>
@@ -114,7 +116,7 @@ export default function FinancePanel(): JSX.Element {
       </div>
 
       <button type="button" className="finance-savings-toggle" onClick={() => setExpanded((v) => !v)}>
-        <span>Сбережения</span>
+        <span>{t('finance.savingsLabel')}</span>
         <span className="finance-savings-total">${total.toFixed(2)}</span>
       </button>
 
@@ -124,12 +126,12 @@ export default function FinancePanel(): JSX.Element {
             editingId === entry.id ? (
               <div className="finance-row finance-row--form" key={entry.id}>
                 <input
-                  placeholder="Название"
+                  placeholder={t('common.nameLabel')}
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
                 <input
-                  placeholder="Сумма, $"
+                  placeholder={t('finance.amountPlaceholder')}
                   value={form.amount}
                   onChange={(e) => setForm({ ...form, amount: e.target.value })}
                 />
@@ -144,10 +146,10 @@ export default function FinancePanel(): JSX.Element {
               <div className="finance-row" key={entry.id}>
                 <span className="finance-row-name">{entry.name}</span>
                 <span className="finance-row-amount">${entry.amount.toFixed(2)}</span>
-                <button type="button" className="icon-btn" onClick={() => startEdit(entry)} title="Редактировать">
+                <button type="button" className="icon-btn" onClick={() => startEdit(entry)} title={t('common.edit')}>
                   ✎
                 </button>
-                <button type="button" className="icon-btn" onClick={() => removeEntry(entry.id)} title="Удалить">
+                <button type="button" className="icon-btn" onClick={() => removeEntry(entry.id)} title={t('common.delete')}>
                   🗑
                 </button>
               </div>
@@ -157,13 +159,13 @@ export default function FinancePanel(): JSX.Element {
           {adding ? (
             <div className="finance-row finance-row--form">
               <input
-                placeholder="Название"
+                placeholder={t('common.nameLabel')}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 autoFocus
               />
               <input
-                placeholder="Сумма, $"
+                placeholder={t('finance.amountPlaceholder')}
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
               />

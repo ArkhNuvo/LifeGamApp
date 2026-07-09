@@ -7,12 +7,19 @@
 }
 
 .auth-card {
+  position: relative;
   background: var(--bg-1);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 32px;
   width: 360px;
   box-shadow: var(--shadow);
+}
+
+.auth-language-corner {
+  position: absolute;
+  top: 12px;
+  right: 12px;
 }
 
 .auth-title {
@@ -66,6 +73,17 @@
   gap: 6px;
   font-size: 13px;
   color: var(--text-1);
+}
+
+.auth-remember {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  cursor: pointer;
+}
+
+.auth-remember input {
+  width: auto;
 }
 
 .auth-error {

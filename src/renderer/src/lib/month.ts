@@ -1,4 +1,6 @@
 import type { KanbanMonth } from './types'
+import type { TranslationKey } from './i18n'
+import type { TFunction } from './i18n/useT'
 
 export function monthKey(year: number, monthIndex0: number): string {
   return `${year}-${String(monthIndex0 + 1).padStart(2, '0')}`
@@ -9,24 +11,24 @@ export function parseMonthKey(key: string): { year: number; monthIndex0: number 
   return { year: y, monthIndex0: m - 1 }
 }
 
-const MONTH_NAMES = [
-  'january',
-  'february',
-  'march',
-  'april',
-  'may',
-  'june',
-  'july',
-  'august',
-  'september',
-  'october',
-  'november',
-  'december'
+export const MONTH_NAME_KEYS: TranslationKey[] = [
+  'kanban.months.january',
+  'kanban.months.february',
+  'kanban.months.march',
+  'kanban.months.april',
+  'kanban.months.may',
+  'kanban.months.june',
+  'kanban.months.july',
+  'kanban.months.august',
+  'kanban.months.september',
+  'kanban.months.october',
+  'kanban.months.november',
+  'kanban.months.december'
 ]
 
-export function formatMonthLabel(key: string): string {
+export function formatMonthLabel(key: string, t: TFunction): string {
   const { year, monthIndex0 } = parseMonthKey(key)
-  return `${MONTH_NAMES[monthIndex0]} ${year}`
+  return `${t(MONTH_NAME_KEYS[monthIndex0])} ${year}`
 }
 
 export function currentMonthKey(): string {

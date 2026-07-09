@@ -1,4 +1,5 @@
-:root {
+:root,
+:root[data-theme='dark'] {
   --bg-0: #0f1220;
   --bg-1: #161a2c;
   --bg-2: #1e2338;
@@ -13,11 +14,56 @@
   --warn: #ffb454;
   --radius: 10px;
   --shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme='light'] {
+  --bg-0: #eef0f7;
+  --bg-1: #f6f7fb;
+  --bg-2: #ffffff;
+  --bg-3: #e7e9f4;
+  --border: #d7dae8;
+  --text-0: #1b1e2e;
+  --text-1: #4b5170;
+  --text-2: #6b7094;
+  --danger: #d8324a;
+  --warn: #b9740f;
+  --radius: 10px;
+  --shadow: 0 4px 18px rgba(30, 34, 60, 0.12);
+}
+
+:root {
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-3) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-3);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 html,
@@ -62,11 +108,13 @@ textarea:focus {
   background: transparent;
   border: none;
   color: var(--text-1);
-  padding: 4px;
+  padding: 5px;
   border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-size: 18px;
+  line-height: 1;
 }
 
 .icon-btn:hover {

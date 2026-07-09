@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { formatMonthLabel } from '../../lib/month'
+import { useT } from '../../lib/i18n/useT'
 import CustomMonthModal from './CustomMonthModal'
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 const CUSTOM = '__custom__'
 
 export default function MonthPicker({ value, options, monthsWithActivity, onChange }: Props): JSX.Element {
+  const t = useT()
   const [pickingCustom, setPickingCustom] = useState(false)
 
   return (
@@ -28,11 +30,11 @@ export default function MonthPicker({ value, options, monthsWithActivity, onChan
       >
         {options.map((key) => (
           <option key={key} value={key}>
-            {formatMonthLabel(key)}
+            {formatMonthLabel(key, t)}
             {monthsWithActivity.has(key) ? ' •' : ''}
           </option>
         ))}
-        <option value={CUSTOM}>Другой месяц...</option>
+        <option value={CUSTOM}>{t('kanban.otherMonth')}</option>
       </select>
       {pickingCustom && (
         <CustomMonthModal

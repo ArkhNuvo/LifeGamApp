@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
 import { startPairing, checkPairingStatus } from '../../lib/telegramSync'
+import { useT } from '../../lib/i18n/useT'
 import './TelegramLinkModal.css'
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export default function TelegramLinkModal({ onClose }: Props): JSX.Element {
+  const t = useT()
   const username = useAppStore((s) => s.username)
   const apiToken = useAppStore((s) => s.data?.telegram.apiToken ?? null)
   const updateData = useAppStore((s) => s.updateData)
@@ -42,7 +44,7 @@ export default function TelegramLinkModal({ onClose }: Props): JSX.Element {
         }
       }, 3000)
     } catch {
-      setError('Не удалось связаться с сервером. Попробуй позже.')
+      setError(t('telegram.errorNetwork'))
     }
   }
 
@@ -58,43 +60,38 @@ export default function TelegramLinkModal({ onClose }: Props): JSX.Element {
         <h2>Telegram</h2>
         {apiToken ? (
           <>
-            <p className="telegram-status telegram-status--ok">Подключено ✓</p>
-            <p className="field-hint">
-              Присылай активности боту командой /newcard — они появятся в «Активности вне
-              канбана».
-            </p>
+            <p className="telegram-status telegram-status--ok">{t('telegram.connected')}</p>
+            <p className="field-hint">{t('telegram.hintConnected')}</p>
             <div className="modal-actions">
               <button type="button" className="btn" onClick={onClose}>
-                Закрыть
+                {t('common.close')}
               </button>
               <button type="button" className="btn btn-danger" onClick={handleUnlink}>
-                Отвязать
+                {t('telegram.unlink')}
               </button>
             </div>
           </>
         ) : code ? (
           <>
-            <p>Отправь боту команду:</p>
+            <p>{t('telegram.sendCommand')}</p>
             <div className="telegram-code">/link {code}</div>
-            <p className="field-hint">Ожидаю подтверждения... не закрывай окно.</p>
+            <p className="field-hint">{t('telegram.waiting')}</p>
             <div className="modal-actions">
               <button type="button" className="btn" onClick={onClose}>
-                Закрыть
+                {t('common.close')}
               </button>
             </div>
           </>
         ) : (
           <>
-            <p className="field-hint">
-              Подключи Telegram-бота, чтобы добавлять активности с телефона командой /newcard.
-            </p>
+            <p className="field-hint">{t('telegram.hintDisconnected')}</p>
             {error && <div className="auth-error">{error}</div>}
             <div className="modal-actions">
               <button type="button" className="btn" onClick={onClose}>
-                Отмена
+                {t('common.cancel')}
               </button>
               <button type="button" className="btn btn-primary" onClick={handleStart}>
-                Подключить
+                {t('telegram.connect')}
               </button>
             </div>
           </>

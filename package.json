@@ -1,6 +1,6 @@
 {
   "name": "lifegam",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "LifeGam - gamify your life",
   "main": "./out/main/index.js",
   "author": "aiarh",
@@ -11,13 +11,18 @@
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "dist:win": "electron-vite build && electron-builder --win --publish never",
-    "dist:mac": "electron-vite build && electron-builder --mac --publish never"
+    "dist:mac": "electron-vite build && electron-builder --mac --publish never",
+    "release:win": "electron-vite build && electron-builder --win --publish always"
   },
   "build": {
     "appId": "com.arkhipov.lifegam",
     "productName": "LifeGam",
     "asar": true,
-    "publish": null,
+    "publish": {
+      "provider": "github",
+      "owner": "ArkhNuvo",
+      "repo": "LifeGamApp"
+    },
     "directories": {
       "output": "dist"
     },

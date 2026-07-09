@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { MENTAL_QUIZ, PHYSICAL_QUIZ, scoreQuiz, QuizAnswer, QuizQuestion } from '../../lib/energy'
 import { useAppStore } from '../../state/useAppStore'
+import { useT, type TFunction } from '../../lib/i18n/useT'
+import type { TranslationKey } from '../../lib/i18n'
 import './EnergyQuizModal.css'
 
 interface Props {
@@ -8,23 +10,25 @@ interface Props {
   onClose: () => void
 }
 
-const TITLES: Record<Props['kind'], string> = {
-  mental: 'Оцени ментальную энергию',
-  physical: 'Оцени физическую энергию'
+const TITLE_KEYS: Record<Props['kind'], TranslationKey> = {
+  mental: 'energyQuiz.titleMental',
+  physical: 'energyQuiz.titlePhysical'
 }
 
 function QuestionRow({
   question,
   value,
-  onChange
+  onChange,
+  t
 }: {
   question: QuizQuestion
   value: QuizAnswer | undefined
   onChange: (v: QuizAnswer) => void
+  t: TFunction
 }): JSX.Element {
   return (
     <div className="quiz-question">
-      <div className="quiz-question-text">{question.text}</div>
+      <div className="quiz-question-text">{t(question.textKey)}</div>
       {question.kind === 'scale' ? (
         <div className="quiz-scale">
           {[0, 1, 2, 3, 4, 5].map((n) => (
@@ -45,14 +49,14 @@ function QuestionRow({
             className={value === true ? 'quiz-yesno-btn active' : 'quiz-yesno-btn'}
             onClick={() => onChange(true)}
           >
-            Да
+            {t('common.yes')}
           </button>
           <button
             type="button"
             className={value === false ? 'quiz-yesno-btn active' : 'quiz-yesno-btn'}
             onClick={() => onChange(false)}
           >
-            Нет
+            {t('common.no')}
           </button>
         </div>
       )}
@@ -61,6 +65,7 @@ function QuestionRow({
 }
 
 export default function EnergyQuizModal({ kind, onClose }: Props): JSX.Element {
+  const t = useT()
   const updateData = useAppStore((s) => s.updateData)
   const questions = kind === 'mental' ? MENTAL_QUIZ : PHYSICAL_QUIZ
   const [answers, setAnswers] = useState<Record<string, QuizAnswer>>({})
@@ -78,7 +83,7 @@ export default function EnergyQuizModal({ kind, onClose }: Props): JSX.Element {
   return (
     <div className="modal-overlay">
       <div className="modal-card energy-quiz-card">
-        <h2>{TITLES[kind]}</h2>
+        <h2>{t(TITLE_KEYS[kind])}</h2>
 
         {questions.map((q) => (
           <QuestionRow
@@ -86,12 +91,13 @@ export default function EnergyQuizModal({ kind, onClose }: Props): JSX.Element {
             question={q}
             value={answers[q.id]}
             onChange={(v) => setAnswers((s) => ({ ...s, [q.id]: v }))}
+            t={t}
           />
         ))}
 
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>
-            Отмена
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -99,7 +105,7 @@ export default function EnergyQuizModal({ kind, onClose }: Props): JSX.Element {
             onClick={handleSubmit}
             disabled={!allAnswered}
           >
-            Сохранить
+            {t('common.save')}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useAppStore } from '../../state/useAppStore'
 import { todayISO } from '../../lib/date'
 import { formatMonthLabel } from '../../lib/month'
+import { useT } from '../../lib/i18n/useT'
 
 interface MissedItem {
   title: string
@@ -9,6 +10,7 @@ interface MissedItem {
 }
 
 export default function MissedActivitiesWidget(): JSX.Element {
+  const t = useT()
   const months = useAppStore((s) => s.data?.kanban.months ?? {})
   const unassigned = useAppStore((s) => s.data?.kanban.unassigned ?? [])
   const today = todayISO()
@@ -18,14 +20,14 @@ export default function MissedActivitiesWidget(): JSX.Element {
     for (const col of month.columns) {
       for (const card of col.cards) {
         if (!card.done && card.completedDate && card.completedDate < today) {
-          missed.push({ title: card.title, completedDate: card.completedDate, location: formatMonthLabel(key) })
+          missed.push({ title: card.title, completedDate: card.completedDate, location: formatMonthLabel(key, t) })
         }
       }
     }
   }
   for (const card of unassigned) {
     if (!card.done && card.completedDate && card.completedDate < today) {
-      missed.push({ title: card.title, completedDate: card.completedDate, location: 'вне канбана' })
+      missed.push({ title: card.title, completedDate: card.completedDate, location: t('stats.missedLocationUnassigned') })
     }
   }
   missed.sort((a, b) => a.completedDate.localeCompare(b.completedDate))
@@ -36,7 +38,7 @@ export default function MissedActivitiesWidget(): JSX.Element {
         {missed.length}
       </div>
       {missed.length === 0 ? (
-        <div className="widget-empty">Пропущенных активностей нет</div>
+        <div className="widget-empty">{t('stats.emptyMissed')}</div>
       ) : (
         <div className="planned-list">
           {missed.map((m, i) => (

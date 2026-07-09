@@ -4,13 +4,8 @@ import { useAppStore } from '../../state/useAppStore'
 import { currentMonthKey } from '../../lib/month'
 import ScopeSelector, { ALL_TIME_SCOPE } from './ScopeSelector'
 import type { ColumnStatus } from '../../lib/types'
-
-const STATUS_LABEL: Record<ColumnStatus, string> = {
-  TODO: 'TO DO',
-  PLANNED: 'PLANNED',
-  IN_PROGRESS: 'IN PROCESS',
-  DONE: 'DONE'
-}
+import { STATUS_LABEL_KEYS } from '../kanban/statusLabels'
+import { useT } from '../../lib/i18n/useT'
 
 const STATUS_COLOR: Record<ColumnStatus, string> = {
   TODO: '#7c5cff',
@@ -20,6 +15,7 @@ const STATUS_COLOR: Record<ColumnStatus, string> = {
 }
 
 export default function StatusBreakdownWidget(): JSX.Element {
+  const t = useT()
   const months = useAppStore((s) => s.data?.kanban.months ?? {})
   const monthOptions = Object.keys(months).sort()
   const [scope, setScope] = useState<string>(
@@ -34,7 +30,7 @@ export default function StatusBreakdownWidget(): JSX.Element {
     })
   })
   const data = (Object.keys(counts) as ColumnStatus[]).map((status) => ({
-    status: STATUS_LABEL[status],
+    status: t(STATUS_LABEL_KEYS[status]),
     count: counts[status],
     color: STATUS_COLOR[status]
   }))
@@ -44,7 +40,7 @@ export default function StatusBreakdownWidget(): JSX.Element {
     <div className="widget-with-month">
       <ScopeSelector value={scope} monthOptions={monthOptions} onChange={setScope} />
       {total === 0 ? (
-        <div className="widget-empty">Нет активностей за этот период</div>
+        <div className="widget-empty">{t('stats.emptyStatusPeriod')}</div>
       ) : (
         <ResponsiveContainer width="100%" height={130}>
           <BarChart data={data} layout="vertical" margin={{ left: 0, right: 12 }}>

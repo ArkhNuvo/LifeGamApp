@@ -1,6 +1,7 @@
 import { getLevelProgress } from '../../lib/xpCurve'
 import XpBar from '../common/XpBar'
 import type { Subskill } from '../../lib/types'
+import { useT } from '../../lib/i18n/useT'
 
 interface Props {
   subskill: Subskill
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function SubskillRow({ subskill, color, onDelete }: Props): JSX.Element {
+  const t = useT()
   const progress = getLevelProgress(subskill.xp)
 
   return (
@@ -21,7 +23,7 @@ export default function SubskillRow({ subskill, color, onDelete }: Props): JSX.E
         color={color}
         size="sm"
       />
-      <button type="button" className="icon-btn subskill-delete" onClick={onDelete} title="Удалить подскилл">
+      <button type="button" className="icon-btn subskill-delete" onClick={onDelete} title={t('skills.deleteSubskillTooltip')}>
         ×
       </button>
     </div>

@@ -8,6 +8,7 @@ import SubskillRow from './SubskillRow'
 import NameModal from './NameModal'
 import AddSkillModal from './AddSkillModal'
 import ConfirmModal from '../common/ConfirmModal'
+import { useT } from '../../lib/i18n/useT'
 
 interface Props {
   skill: Skill
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function SkillItem({ skill, totalXp }: Props): JSX.Element {
+  const t = useT()
   const updateData = useAppStore((s) => s.updateData)
   const [addingSubskill, setAddingSubskill] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -65,7 +67,13 @@ export default function SkillItem({ skill, totalXp }: Props): JSX.Element {
           className="skill-item-toggle"
           onClick={() => setExpanded((v) => !v)}
           disabled={skill.subskills.length === 0}
-          title={skill.subskills.length === 0 ? undefined : expanded ? 'Свернуть подскиллы' : 'Показать подскиллы'}
+          title={
+            skill.subskills.length === 0
+              ? undefined
+              : expanded
+                ? t('skills.collapseTooltip')
+                : t('skills.expandTooltip')
+          }
         >
           {skill.subskills.length > 0 ? (expanded ? '▾' : '▸') : ''}
         </button>
@@ -83,18 +91,18 @@ export default function SkillItem({ skill, totalXp }: Props): JSX.Element {
           <button
             type="button"
             className="icon-btn"
-            title="Добавить подскилл"
+            title={t('skills.addSubskillTooltip')}
             onClick={() => setAddingSubskill(true)}
           >
             +
           </button>
-          <button type="button" className="icon-btn" title="Редактировать навык" onClick={() => setEditing(true)}>
+          <button type="button" className="icon-btn" title={t('skills.editTooltip')} onClick={() => setEditing(true)}>
             ✎
           </button>
           <button
             type="button"
             className="icon-btn"
-            title="Удалить навык"
+            title={t('skills.deleteTooltip')}
             onClick={() => setConfirmingDelete(true)}
           >
             🗑
@@ -117,8 +125,8 @@ export default function SkillItem({ skill, totalXp }: Props): JSX.Element {
 
       {addingSubskill && (
         <NameModal
-          title="Новый подскилл"
-          label="Название"
+          title={t('skills.newSubskillTitle')}
+          label={t('common.nameLabel')}
           onCancel={() => setAddingSubskill(false)}
           onSave={addSubskill}
         />
@@ -133,7 +141,7 @@ export default function SkillItem({ skill, totalXp }: Props): JSX.Element {
       )}
       {confirmingDelete && (
         <ConfirmModal
-          message="Вы действительно хотите удалить это умение?"
+          message={t('skills.confirmDelete')}
           onConfirm={deleteSkill}
           onCancel={() => setConfirmingDelete(false)}
         />

@@ -3,6 +3,7 @@ import { useAppStore } from '../../state/useAppStore'
 import { buildMonthOptions, formatMonthLabel } from '../../lib/month'
 import { createDefaultColumns } from '../../lib/kanbanDefaults'
 import { syncCardDoneState } from '../../lib/kanbanXp'
+import { useT } from '../../lib/i18n/useT'
 
 interface Props {
   cardId: string
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function AssignCardModal({ cardId, onCancel, onDone }: Props): JSX.Element {
+  const t = useT()
   const data = useAppStore((s) => s.data)
   const updateData = useAppStore((s) => s.updateData)
   const monthOptions = buildMonthOptions(Object.keys(data?.kanban.months ?? {}))
@@ -47,19 +49,19 @@ export default function AssignCardModal({ cardId, onCancel, onDone }: Props): JS
   return (
     <div className="modal-overlay">
       <div className="modal-card">
-        <h2>Перенести в канбан</h2>
+        <h2>{t('kanban.moveToKanbanTitle')}</h2>
         <div className="form-field">
-          <label>Месяц</label>
+          <label>{t('kanban.monthLabel')}</label>
           <select value={monthKey} onChange={(e) => setMonthKey(e.target.value)}>
             {monthOptions.map((k) => (
               <option key={k} value={k}>
-                {formatMonthLabel(k)}
+                {formatMonthLabel(k, t)}
               </option>
             ))}
           </select>
         </div>
         <div className="form-field">
-          <label>Колонка</label>
+          <label>{t('kanban.assignColumnLabel')}</label>
           <select value={columnId} onChange={(e) => setColumnId(e.target.value)}>
             {columns.map((c) => (
               <option key={c.id} value={c.id}>
@@ -70,10 +72,10 @@ export default function AssignCardModal({ cardId, onCancel, onDone }: Props): JS
         </div>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onCancel}>
-            Отмена
+            {t('common.cancel')}
           </button>
           <button type="button" className="btn btn-primary" onClick={confirm} disabled={!columnId}>
-            Перенести
+            {t('kanban.assignButton')}
           </button>
         </div>
       </div>

@@ -3,8 +3,10 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { useAppStore } from '../../state/useAppStore'
 import { skillXpForMonth } from '../../lib/skillXpByMonth'
 import { formatMonthLabel } from '../../lib/month'
+import { useT } from '../../lib/i18n/useT'
 
 export default function SkillTrendWidget(): JSX.Element {
+  const t = useT()
   const skills = useAppStore((s) => s.data?.skills ?? [])
   const months = useAppStore((s) => s.data?.kanban.months ?? {})
   const [selected, setSelected] = useState<Set<string> | null>(null)
@@ -16,7 +18,7 @@ export default function SkillTrendWidget(): JSX.Element {
     const running: Record<string, number> = {}
     return monthKeys.map((key) => {
       const gained = skillXpForMonth(months, key)
-      const point: Record<string, number | string> = { month: formatMonthLabel(key) }
+      const point: Record<string, number | string> = { month: formatMonthLabel(key, t) }
       for (const skill of skills) {
         running[skill.id] = (running[skill.id] ?? 0) + (gained[skill.id] ?? 0)
         point[skill.id] = running[skill.id]
@@ -24,7 +26,7 @@ export default function SkillTrendWidget(): JSX.Element {
       return point
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [months, skills])
+  }, [months, skills, t])
 
   function toggle(id: string): void {
     setSelected((prev) => {
@@ -43,10 +45,10 @@ export default function SkillTrendWidget(): JSX.Element {
   }
 
   if (skills.length === 0) {
-    return <div className="widget-empty">Сначала добавь навыки</div>
+    return <div className="widget-empty">{t('stats.emptyTrendNoSkills')}</div>
   }
   if (monthKeys.length === 0) {
-    return <div className="widget-empty">Пока нет данных по месяцам</div>
+    return <div className="widget-empty">{t('stats.emptyTrendNoMonths')}</div>
   }
 
   return (
@@ -54,7 +56,7 @@ export default function SkillTrendWidget(): JSX.Element {
       <div className="trend-skill-list">
         <label className="trend-skill-item">
           <input type="checkbox" checked={selectedIds.size === skills.length} onChange={toggleAll} />
-          <span>Все</span>
+          <span>{t('stats.trendAllLabel')}</span>
         </label>
         {skills.map((skill) => (
           <label className="trend-skill-item" key={skill.id}>

@@ -10,9 +10,11 @@ import ColumnModal from './ColumnModal'
 import MonthPicker from './MonthPicker'
 import UnassignedStrip from './UnassignedStrip'
 import type { ColumnStatus } from '../../lib/types'
+import { useT } from '../../lib/i18n/useT'
 import './Kanban.css'
 
 export default function Board(): JSX.Element {
+  const t = useT()
   const data = useAppStore((s) => s.data)
   const updateData = useAppStore((s) => s.updateData)
   const [monthKey, setMonthKey] = useState(currentMonthKey())
@@ -113,11 +115,11 @@ export default function Board(): JSX.Element {
           onChange={setMonthKey}
         />
         <div className="kanban-zoom">
-          <button type="button" className="icon-btn" onClick={() => changeZoom(-0.1)} title="Уменьшить масштаб">
+          <button type="button" className="icon-btn" onClick={() => changeZoom(-0.1)} title={t('kanban.zoomOutTooltip')}>
             −
           </button>
           <span className="kanban-zoom-value">{Math.round(zoom * 100)}%</span>
-          <button type="button" className="icon-btn" onClick={() => changeZoom(0.1)} title="Увеличить масштаб">
+          <button type="button" className="icon-btn" onClick={() => changeZoom(0.1)} title={t('kanban.zoomInTooltip')}>
             +
           </button>
         </div>
@@ -137,7 +139,7 @@ export default function Board(): JSX.Element {
               ))}
               {provided.placeholder}
               <button type="button" className="kanban-create-column-btn" onClick={() => setAddingColumn(true)}>
-                + Создать колонку
+                {t('kanban.createColumnButton')}
               </button>
             </div>
           )}

@@ -2,14 +2,18 @@ import { useState } from 'react'
 import Board from '../kanban/Board'
 import StatsGrid from '../stats/StatsGrid'
 import ThemeSwitcher from '../common/ThemeSwitcher'
+import LanguageSwitcher from '../common/LanguageSwitcher'
+import UpdateChecker from '../common/UpdateChecker'
 import TelegramLinkModal from '../common/TelegramLinkModal'
 import { useAppStore } from '../../state/useAppStore'
 import { syncWithTelegram } from '../../lib/telegramSync'
+import { useT } from '../../lib/i18n/useT'
 import './MainPanel.css'
 
 type Tab = 'kanban' | 'stats'
 
 export default function MainPanel(): JSX.Element {
+  const t = useT()
   const [tab, setTab] = useState<Tab>('kanban')
   const username = useAppStore((s) => s.username)
   const logout = useAppStore((s) => s.logout)
@@ -33,14 +37,14 @@ export default function MainPanel(): JSX.Element {
             className={tab === 'kanban' ? 'main-tab active' : 'main-tab'}
             onClick={() => setTab('kanban')}
           >
-            Kanban
+            {t('main.tabKanban')}
           </button>
           <button
             type="button"
             className={tab === 'stats' ? 'main-tab active' : 'main-tab'}
             onClick={() => setTab('stats')}
           >
-            Stats
+            {t('main.tabStats')}
           </button>
         </div>
         <div className="main-panel-user">
@@ -50,7 +54,7 @@ export default function MainPanel(): JSX.Element {
               className="icon-btn"
               onClick={handleRefresh}
               disabled={syncing}
-              title="Проверить новые карточки из Telegram сейчас"
+              title={t('main.refreshTooltip')}
             >
               {syncing ? '⏳' : '🔄'}
             </button>
@@ -59,14 +63,16 @@ export default function MainPanel(): JSX.Element {
             type="button"
             className="icon-btn"
             onClick={() => setTelegramOpen(true)}
-            title={apiToken ? 'Telegram подключён' : 'Подключить Telegram'}
+            title={apiToken ? t('main.telegramConnectedTooltip') : t('main.telegramConnectTooltip')}
           >
             {apiToken ? '🔗' : '📱'}
           </button>
+          <UpdateChecker />
           <ThemeSwitcher />
+          <LanguageSwitcher />
           <span>{username}</span>
           <button type="button" className="btn" onClick={logout}>
-            Выйти
+            {t('main.logout')}
           </button>
         </div>
       </div>

@@ -4,12 +4,13 @@
  * candidate score; the final value is their average, rounded to the nearest
  * 25 to match the quarter-step battery/bicep display.
  */
+import type { TranslationKey } from './i18n'
 
 export type QuizAnswer = number | boolean
 
 export interface QuizQuestion {
   id: string
-  text: string
+  textKey: TranslationKey
   kind: 'scale' | 'yesno'
   /** For 'yesno': score if answer is "yes" (true) / "no" (false). */
   yesScore?: number
@@ -17,24 +18,24 @@ export interface QuizQuestion {
 }
 
 export const MENTAL_QUIZ: QuizQuestion[] = [
-  { id: 'feeling', text: 'Как ты себя чувствуешь по шкале от 0 до 5?', kind: 'scale' },
+  { id: 'feeling', textKey: 'energyQuiz.q.feeling', kind: 'scale' },
   {
     id: 'struggled',
-    text: 'Ты тупил при выполнении предыдущего задания?',
+    textKey: 'energyQuiz.q.struggled',
     kind: 'yesno',
     yesScore: 50,
     noScore: 100
   },
   {
     id: 'distracted',
-    text: 'Ты отвлекался во время предыдущей активности?',
+    textKey: 'energyQuiz.q.distracted',
     kind: 'yesno',
     yesScore: 75,
     noScore: 100
   },
   {
     id: 'sleep',
-    text: 'Ты хорошо выспался в последнее время?',
+    textKey: 'energyQuiz.q.sleep',
     kind: 'yesno',
     yesScore: 100,
     noScore: 50
@@ -42,10 +43,10 @@ export const MENTAL_QUIZ: QuizQuestion[] = [
 ]
 
 export const PHYSICAL_QUIZ: QuizQuestion[] = [
-  { id: 'strength', text: 'Сколько физических сил у тебя осталось, по шкале от 0 до 5?', kind: 'scale' },
+  { id: 'strength', textKey: 'energyQuiz.q.strength', kind: 'scale' },
   {
     id: 'soreness',
-    text: 'Чувствуешь физический дискомфорт или усталость в теле?',
+    textKey: 'energyQuiz.q.soreness',
     kind: 'yesno',
     yesScore: 50,
     noScore: 100

@@ -1,5 +1,5 @@
 import { todayISO } from './date'
-import type { ColumnStatus, KanbanCard, UserData } from './types'
+import type { ColumnStatus, KanbanCard, KanbanColumn, UserData } from './types'
 
 /**
  * XP is whatever the user assigned to each skill/subskill when creating the
@@ -100,4 +100,32 @@ export function syncCardDoneState(
     revertCardEffects(draft, card)
     card.effectsApplied = false
   }
+}
+
+/**
+ * Relocates a card into its month's DONE-status column, inserted at the
+ * top, then syncs its done state — for sources that flag a card done
+ * without themselves performing the physical move (e.g. the Telegram bot).
+ * In-app, this normally happens via drag-and-drop; this mirrors that.
+ * No-op (falls back to an in-place sync) if the card is unassigned, its
+ * month has no DONE column, or it's already sitting in one.
+ */
+export function moveToDoneColumnAndSync(
+  draft: UserData,
+  monthKey: string | null,
+  column: KanbanColumn | null,
+  card: KanbanCard,
+  desiredDone?: boolean
+): void {
+  const shouldMigrate = desiredDone === true && column && column.status !== 'DONE' && monthKey
+  if (shouldMigrate) {
+    const doneColumn = draft.kanban.months[monthKey]?.columns.find((c) => c.status === 'DONE')
+    if (doneColumn) {
+      column.cards = column.cards.filter((c) => c.id !== card.id)
+      doneColumn.cards.unshift(card)
+      syncCardDoneState(draft, card, doneColumn.status, desiredDone)
+      return
+    }
+  }
+  syncCardDoneState(draft, card, column?.status ?? 'TODO', desiredDone)
 }

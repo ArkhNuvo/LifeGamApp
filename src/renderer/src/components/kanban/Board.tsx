@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd'
 import { useAppStore } from '../../state/useAppStore'
 import { currentMonthKey, buildMonthOptions, computeMonthsWithActivity } from '../../lib/month'
@@ -19,6 +19,8 @@ export default function Board(): JSX.Element {
   const updateData = useAppStore((s) => s.updateData)
   const [monthKey, setMonthKey] = useState(currentMonthKey())
   const [addingColumn, setAddingColumn] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const columnsRef = useRef<HTMLDivElement | null>(null)
 
   const monthExists = !!data?.kanban.months[monthKey]
 
@@ -45,6 +47,44 @@ export default function Board(): JSX.Element {
   )
   const zoom = data?.kanban.zoom ?? 1
 
+  // @hello-pangea/dnd only auto-scrolls droppables matching the dragged
+  // item's type, so dragging a CARD never auto-scrolls the horizontal
+  // COLUMN strip that holds it. Drive that scroll ourselves while a drag
+  // (of any type) is in progress, based on raw cursor position.
+  useEffect(() => {
+    if (!isDragging) return
+    const container = columnsRef.current
+    if (!container) return
+
+    const EDGE = 80
+    const MAX_SPEED = 18
+    let mouseX = 0
+    let rafId: number
+
+    function handleMouseMove(e: MouseEvent): void {
+      mouseX = e.clientX
+    }
+
+    function tick(): void {
+      const rect = container!.getBoundingClientRect()
+      if (mouseX < rect.left + EDGE) {
+        const intensity = Math.min(1, (rect.left + EDGE - mouseX) / EDGE)
+        container!.scrollLeft -= MAX_SPEED * intensity
+      } else if (mouseX > rect.right - EDGE) {
+        const intensity = Math.min(1, (mouseX - (rect.right - EDGE)) / EDGE)
+        container!.scrollLeft += MAX_SPEED * intensity
+      }
+      rafId = requestAnimationFrame(tick)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    rafId = requestAnimationFrame(tick)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      cancelAnimationFrame(rafId)
+    }
+  }, [isDragging])
+
   function changeZoom(delta: number): void {
     updateData((draft) => {
       draft.kanban.zoom = Math.round(Math.min(1.2, Math.max(0.5, draft.kanban.zoom + delta)) * 100) / 100
@@ -67,6 +107,7 @@ export default function Board(): JSX.Element {
   }
 
   function onDragEnd(result: DropResult): void {
+    setIsDragging(false)
     const { source, destination, type } = result
     if (!destination) return
 
@@ -125,12 +166,15 @@ export default function Board(): JSX.Element {
         </div>
       </div>
 
-      <DragDropContext onDragEnd={onDragEnd}>
+      <DragDropContext onDragStart={() => setIsDragging(true)} onDragEnd={onDragEnd}>
         <Droppable droppableId="board" direction="horizontal" type="COLUMN">
           {(provided) => (
             <div
               className="kanban-columns"
-              ref={provided.innerRef}
+              ref={(el) => {
+                columnsRef.current = el
+                provided.innerRef(el)
+              }}
               {...provided.droppableProps}
               style={{ zoom }}
             >

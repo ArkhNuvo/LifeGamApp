@@ -4,13 +4,14 @@ import type {
   TelegramCreateActionPayload,
   TelegramDeleteActionPayload,
   TelegramEditActionPayload,
+  TelegramSetEnergyActionPayload,
   TelegramToggleDoneActionPayload,
   KanbanCard,
   UserData
 } from './types'
 import { newId } from './ids'
 import { buildCatalogPayload, findCardEverywhere } from './kanbanCatalog'
-import { revertCardEffects, syncCardDoneState } from './kanbanXp'
+import { revertCardEffects, syncCardDoneState, moveToDoneColumnAndSync } from './kanbanXp'
 import { useAppStore } from '../state/useAppStore'
 
 export function startPairing(username: string): Promise<string> {
@@ -67,7 +68,7 @@ function applyCreateAction(draft: UserData, payload: TelegramCreateActionPayload
 function applyToggleDoneAction(draft: UserData, payload: TelegramToggleDoneActionPayload): void {
   const found = findCardEverywhere(draft, payload.cardId)
   if (!found) return
-  syncCardDoneState(draft, found.card, found.column?.status ?? 'TODO', payload.done)
+  moveToDoneColumnAndSync(draft, found.monthKey, found.column, found.card, payload.done)
 }
 
 function applyEditAction(draft: UserData, payload: TelegramEditActionPayload): void {
@@ -85,6 +86,11 @@ function applyDeleteAction(draft: UserData, payload: TelegramDeleteActionPayload
   } else {
     draft.kanban.unassigned = draft.kanban.unassigned.filter((c) => c.id !== payload.cardId)
   }
+}
+
+function applySetEnergyAction(draft: UserData, payload: TelegramSetEnergyActionPayload): void {
+  const clamped = Math.max(0, Math.min(100, payload.value))
+  draft.energy[payload.kind] = clamped
 }
 
 let syncInFlight = false
@@ -119,6 +125,9 @@ export async function syncWithTelegram(apiToken: string): Promise<void> {
                 break
               case 'delete':
                 applyDeleteAction(draft, action.payload as TelegramDeleteActionPayload)
+                break
+              case 'set_energy':
+                applySetEnergyAction(draft, action.payload as TelegramSetEnergyActionPayload)
                 break
             }
           }

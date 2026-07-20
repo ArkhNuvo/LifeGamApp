@@ -74,6 +74,12 @@ const pl: Record<TranslationKey, string> = {
   'finance.savingsLabel': 'Oszczędności',
   'finance.amountPlaceholder': 'Kwota, $',
   'finance.categoryGeneralOption': 'Bez kategorii',
+  'finance.currencyPickerTooltip': 'Zmień walutę',
+  'finance.exchangeRatesTooltip': 'Kursy walut do dolara',
+  'finance.noForeignCurrencies': 'Brak walut innych niż dolar',
+  'finance.ratesUpdated': 'Zaktualizowano: {date}',
+  'finance.ratesLoading': 'Ładowanie kursów…',
+  'finance.refreshRatesTooltip': 'Odśwież kursy',
 
   'checkin.emoji.terrible': 'Okropnie',
   'checkin.emoji.bad': 'Słabo',
@@ -170,13 +176,7 @@ const pl: Record<TranslationKey, string> = {
   'kanban.costSignTooltip': 'Koszt (kliknij, aby zmienić na przywrócenie)',
   'kanban.restoreSignTooltip': 'Przywrócenie (kliknij, aby zmienić na koszt)',
   'kanban.createdDateLabel': 'Data utworzenia',
-  'kanban.completedDateLabel': 'Data ukończenia',
-  'kanban.completedDateEmptyHint':
-    'Nie ustawiono — wypełni się automatycznie po oznaczeniu aktywności jako wykonanej',
-  'kanban.setDateButton': 'Ustaw datę',
-  'kanban.clearDateTooltip': 'Usuń datę',
-  'kanban.completedDateHint':
-    'Jeśli data nie jest dzisiejsza, koszt/przywrócenie energii nie wpłynie na dzisiejszy bilans energii.',
+  'kanban.completedDateLabel': 'Data realizacji',
   'kanban.moveToLabel': 'Przenieś do',
   'kanban.unassignedOption': '— bez tablicy —',
   'kanban.moveToKanbanTitle': 'Przenieś na tablicę',

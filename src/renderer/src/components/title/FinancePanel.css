@@ -5,6 +5,18 @@
   gap: 6px;
 }
 
+.finance-header {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.finance-amount-with-currency {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
 .finance-savings-toggle {
   display: flex;
   justify-content: space-between;

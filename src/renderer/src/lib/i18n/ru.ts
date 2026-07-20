@@ -74,6 +74,12 @@ const ru = {
   'finance.savingsLabel': 'Сбережения',
   'finance.amountPlaceholder': 'Сумма, $',
   'finance.categoryGeneralOption': 'Без категории',
+  'finance.currencyPickerTooltip': 'Сменить валюту',
+  'finance.exchangeRatesTooltip': 'Курсы валют к доллару',
+  'finance.noForeignCurrencies': 'Нет валют, отличных от доллара',
+  'finance.ratesUpdated': 'Обновлено: {date}',
+  'finance.ratesLoading': 'Загрузка курсов…',
+  'finance.refreshRatesTooltip': 'Обновить курсы',
 
   'checkin.emoji.terrible': 'Совсем никак',
   'checkin.emoji.bad': 'Так себе',
@@ -170,13 +176,7 @@ const ru = {
   'kanban.costSignTooltip': 'Затраты (нажми, чтобы сделать восстановлением)',
   'kanban.restoreSignTooltip': 'Восстановление (нажми, чтобы сделать затратой)',
   'kanban.createdDateLabel': 'Дата создания',
-  'kanban.completedDateLabel': 'Дата завершения',
-  'kanban.completedDateEmptyHint':
-    'Не указана — заполнится сама, когда отметишь активность выполненной',
-  'kanban.setDateButton': 'Указать дату',
-  'kanban.clearDateTooltip': 'Убрать дату',
-  'kanban.completedDateHint':
-    'Если дата не сегодняшняя — затраты/восстановление энергии не повлияют на текущий баланс энергии.',
+  'kanban.completedDateLabel': 'Дата реализации',
   'kanban.moveToLabel': 'Перенести в',
   'kanban.unassignedOption': '— без канбана —',
   'kanban.moveToKanbanTitle': 'Перенести в канбан',

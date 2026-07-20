@@ -79,6 +79,12 @@ const isv: Record<TranslationKey, string> = {
   'finance.savingsLabel': 'Uščednosti',
   'finance.amountPlaceholder': 'Suma, $',
   'finance.categoryGeneralOption': 'Bez kategorije',
+  'finance.currencyPickerTooltip': 'Změniti valutu',
+  'finance.exchangeRatesTooltip': 'Kursy valut k dolaru',
+  'finance.noForeignCurrencies': 'Ne jest valut, inych ot dolara',
+  'finance.ratesUpdated': 'Aktualizovano: {date}',
+  'finance.ratesLoading': 'Nahrujut sě kursy…',
+  'finance.refreshRatesTooltip': 'Obnoviti kursy',
 
   'checkin.emoji.terrible': 'Sovsem ploho',
   'checkin.emoji.bad': 'Ne dobro',
@@ -175,13 +181,7 @@ const isv: Record<TranslationKey, string> = {
   'kanban.costSignTooltip': 'Rashod (klikni, aby učiniti vosstanovljenjem)',
   'kanban.restoreSignTooltip': 'Vosstanovljenje (klikni, aby učiniti rashodom)',
   'kanban.createdDateLabel': 'Data sostavljenja',
-  'kanban.completedDateLabel': 'Data izvěršenja',
-  'kanban.completedDateEmptyHint':
-    'Ne ukazana — napuni sě sama, kogda označiš aktivnost kako izvěršenu',
-  'kanban.setDateButton': 'Ukazati datu',
-  'kanban.clearDateTooltip': 'Ubrati datu',
-  'kanban.completedDateHint':
-    'Jesli data ne jest dnešnja, rashod/vosstanovljenje energije ne povlijaje na dnešnji balans energije.',
+  'kanban.completedDateLabel': 'Data realizacije',
   'kanban.moveToLabel': 'Prenesti v',
   'kanban.unassignedOption': '— bez table —',
   'kanban.moveToKanbanTitle': 'Prenesti na kanban',

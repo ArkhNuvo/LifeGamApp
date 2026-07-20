@@ -52,16 +52,38 @@ export interface Skill {
   subskills: Subskill[]
 }
 
+export type CurrencyCode =
+  | 'USD'
+  | 'EUR'
+  | 'PLN'
+  | 'RUB'
+  | 'UAH'
+  | 'GBP'
+  | 'CHF'
+  | 'CZK'
+  | 'HUF'
+  | 'JPY'
+  | 'CNY'
+
+/** Cached daily snapshot of exchange rates against USD (1 USD = rates[code] units of that currency). */
+export interface ExchangeRates {
+  base: 'USD'
+  rates: Record<string, number>
+  fetchedAt: number
+}
+
 export interface SavingsEntry {
   id: string
   name: string
   amount: number
+  currency: CurrencyCode
 }
 
 export interface CheckingCategory {
   id: string
   name: string
   balance: number
+  currency: CurrencyCode
 }
 
 export interface AvatarInfo {
@@ -110,7 +132,7 @@ export interface UserData {
     lastCheckinDate: string | null
   }
   finance: {
-    checking: { balance: number; categories: CheckingCategory[] }
+    checking: { balance: number; currency: CurrencyCode; categories: CheckingCategory[] }
     savings: SavingsEntry[]
   }
   skills: Skill[]
@@ -167,6 +189,13 @@ export interface TelegramCatalogCheckingCategory {
   name: string
 }
 
+/** One line of a checking/savings breakdown; name null = the general/uncategorized checking bucket. */
+export interface TelegramCatalogFinanceEntry {
+  name: string | null
+  amount: number
+  currency: string
+}
+
 export interface TelegramCatalogResources {
   displayName: string
   level: number
@@ -174,7 +203,12 @@ export interface TelegramCatalogResources {
   xpForNextLevel: number
   energyMental: number
   energyPhysical: number
+  /** USD-converted totals, for the top-level /resources summary. */
   checkingBalance: number
+  savingsBalance: number
+  /** Raw per-entry amounts/currencies, for the bot's "Финансы" drill-down. */
+  checkingBreakdown: TelegramCatalogFinanceEntry[]
+  savingsBreakdown: TelegramCatalogFinanceEntry[]
 }
 
 export interface TelegramCatalogPayload {
@@ -188,6 +222,8 @@ export interface TelegramCatalogPayload {
   doneTodayCards: TelegramCatalogCard[]
   /** Every not-done TODO/PLANNED card this month, regardless of date — the bot's "/week" view. */
   weekCards: TelegramCatalogCard[]
+  /** Not-done cards sitting in an IN_PROCESS-status column this month. */
+  inProcessCards: TelegramCatalogCard[]
   /** Profile summary for the bot's "Resources" command. */
   resources: TelegramCatalogResources
   /** The app's current UI language, so the bot can reply in the same language. */
@@ -235,7 +271,12 @@ export interface TelegramDeleteActionPayload {
   cardId: string
 }
 
-export type TelegramActionType = 'create' | 'toggle_done' | 'edit' | 'delete'
+export interface TelegramSetEnergyActionPayload {
+  kind: 'mental' | 'physical'
+  value: number
+}
+
+export type TelegramActionType = 'create' | 'toggle_done' | 'edit' | 'delete' | 'set_energy'
 
 export interface TelegramAction {
   id: number
@@ -245,6 +286,7 @@ export interface TelegramAction {
     | TelegramToggleDoneActionPayload
     | TelegramEditActionPayload
     | TelegramDeleteActionPayload
+    | TelegramSetEnergyActionPayload
 }
 
 export interface AuthResult {

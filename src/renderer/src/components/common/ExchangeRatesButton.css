@@ -1,0 +1,42 @@
+.exchange-rates-button {
+  position: relative;
+}
+
+.exchange-rates-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 60;
+  box-shadow: var(--shadow);
+  min-width: 180px;
+}
+
+.exchange-rate-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.exchange-rates-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.exchange-rates-footer .field-hint {
+  margin: 0;
+}

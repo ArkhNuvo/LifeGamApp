@@ -74,6 +74,12 @@ const hu: Record<TranslationKey, string> = {
   'finance.savingsLabel': 'Megtakarítások',
   'finance.amountPlaceholder': 'Összeg, $',
   'finance.categoryGeneralOption': 'Kategória nélkül',
+  'finance.currencyPickerTooltip': 'Pénznem módosítása',
+  'finance.exchangeRatesTooltip': 'Árfolyamok dollárhoz',
+  'finance.noForeignCurrencies': 'Nincs dollártól eltérő pénznem',
+  'finance.ratesUpdated': 'Frissítve: {date}',
+  'finance.ratesLoading': 'Árfolyamok betöltése…',
+  'finance.refreshRatesTooltip': 'Árfolyamok frissítése',
 
   'checkin.emoji.terrible': 'Szörnyű',
   'checkin.emoji.bad': 'Nem túl jó',
@@ -170,13 +176,7 @@ const hu: Record<TranslationKey, string> = {
   'kanban.costSignTooltip': 'Költség (kattints, hogy visszatöltéssé alakítsd)',
   'kanban.restoreSignTooltip': 'Visszatöltés (kattints, hogy költséggé alakítsd)',
   'kanban.createdDateLabel': 'Létrehozás dátuma',
-  'kanban.completedDateLabel': 'Teljesítés dátuma',
-  'kanban.completedDateEmptyHint':
-    'Nincs beállítva — automatikusan kitöltődik, amikor késznek jelölöd a tevékenységet',
-  'kanban.setDateButton': 'Dátum beállítása',
-  'kanban.clearDateTooltip': 'Dátum törlése',
-  'kanban.completedDateHint':
-    'Ha a dátum nem a mai, az energiaköltség/-visszatöltés nem befolyásolja a mai energiaegyenleget.',
+  'kanban.completedDateLabel': 'Megvalósítás dátuma',
   'kanban.moveToLabel': 'Áthelyezés ide',
   'kanban.unassignedOption': '— nincs tábla —',
   'kanban.moveToKanbanTitle': 'Áthelyezés a táblára',

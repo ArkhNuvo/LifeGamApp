@@ -219,33 +219,41 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
         </div>
 
         <div className="form-field">
-          <label>{t('kanban.mentalEnergyLabel')}</label>
-          <div className="signed-field-row">
-            <SignToggle sign={energyMentalSign} onToggle={() => setEnergyMentalSign((s) => (s === 1 ? -1 : 1))} t={t} />
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={energyMentalAbs}
-              onChange={(e) => setEnergyMentalAbs(Number(e.target.value))}
-            />
-          </div>
-        </div>
-        <div className="form-field">
-          <label>{t('kanban.physicalEnergyLabel')}</label>
-          <div className="signed-field-row">
-            <SignToggle
-              sign={energyPhysicalSign}
-              onToggle={() => setEnergyPhysicalSign((s) => (s === 1 ? -1 : 1))}
-              t={t}
-            />
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={energyPhysicalAbs}
-              onChange={(e) => setEnergyPhysicalAbs(Number(e.target.value))}
-            />
+          <div className="energy-fields-row">
+            <div className="energy-field">
+              <label>🧠 {t('kanban.mentalEnergyLabel')}</label>
+              <div className="signed-field-row">
+                <SignToggle
+                  sign={energyMentalSign}
+                  onToggle={() => setEnergyMentalSign((s) => (s === 1 ? -1 : 1))}
+                  t={t}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={energyMentalAbs}
+                  onChange={(e) => setEnergyMentalAbs(Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <div className="energy-field">
+              <label>💪 {t('kanban.physicalEnergyLabel')}</label>
+              <div className="signed-field-row">
+                <SignToggle
+                  sign={energyPhysicalSign}
+                  onToggle={() => setEnergyPhysicalSign((s) => (s === 1 ? -1 : 1))}
+                  t={t}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={energyPhysicalAbs}
+                  onChange={(e) => setEnergyPhysicalAbs(Number(e.target.value))}
+                />
+              </div>
+            </div>
           </div>
         </div>
         <div className="form-field">
@@ -281,29 +289,19 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
         </div>
         <div className="form-field">
           <label>{t('kanban.completedDateLabel')}</label>
-          {completedDate === null ? (
-            <div className="signed-field-row">
-              <span className="field-hint" style={{ margin: 0 }}>
-                {t('kanban.completedDateEmptyHint')}
-              </span>
-              <button type="button" className="btn" onClick={() => setCompletedDate(todayISO())}>
-                {t('kanban.setDateButton')}
-              </button>
-            </div>
-          ) : (
-            <div className="signed-field-row">
-              <input type="date" value={completedDate} onChange={(e) => setCompletedDate(e.target.value)} />
-              <button
-                type="button"
-                className="icon-btn"
-                onClick={() => setCompletedDate(null)}
-                title={t('kanban.clearDateTooltip')}
-              >
-                ×
-              </button>
-            </div>
-          )}
-          <span className="field-hint">{t('kanban.completedDateHint')}</span>
+          <div className="signed-field-row">
+            <input
+              type="checkbox"
+              checked={completedDate !== null}
+              onChange={(e) => setCompletedDate(e.target.checked ? todayISO() : null)}
+            />
+            <input
+              type="date"
+              value={completedDate ?? ''}
+              disabled={completedDate === null}
+              onChange={(e) => setCompletedDate(e.target.value)}
+            />
+          </div>
         </div>
 
         {currentLocation && (

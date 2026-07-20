@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type {
   AuthResult,
+  ExchangeRates,
   TelegramAction,
   TelegramCatalogPayload,
   UpdateStatus,
@@ -52,6 +53,10 @@ const api = {
       ipcRenderer.on('updates:status', listener)
       return () => ipcRenderer.removeListener('updates:status', listener)
     }
+  },
+  rates: {
+    get: (): Promise<ExchangeRates> => ipcRenderer.invoke('rates:get'),
+    refresh: (): Promise<ExchangeRates> => ipcRenderer.invoke('rates:refresh')
   }
 }
 

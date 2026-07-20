@@ -14,6 +14,7 @@ import {
   readFileAsDataUrl
 } from './storage'
 import * as telegram from './telegram'
+import * as exchangeRates from './exchangeRates'
 import { initUpdater, checkForUpdates, quitAndInstall } from './updater'
 import type { TelegramCatalogPayload, UserData } from '../shared/types'
 
@@ -98,6 +99,9 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('updates:check', () => checkForUpdates())
   ipcMain.handle('updates:quitAndInstall', () => quitAndInstall())
+
+  ipcMain.handle('rates:get', () => exchangeRates.getRates(false))
+  ipcMain.handle('rates:refresh', () => exchangeRates.getRates(true))
 }
 
 app.whenReady().then(() => {

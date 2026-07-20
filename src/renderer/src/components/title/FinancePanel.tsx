@@ -1,24 +1,31 @@
 import { useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
+import { useRatesStore } from '../../state/useRatesStore'
 import { newId } from '../../lib/ids'
-import type { CheckingCategory, SavingsEntry } from '../../lib/types'
+import { convert, convertToUsd } from '../../lib/currency'
+import type { CheckingCategory, CurrencyCode, SavingsEntry } from '../../lib/types'
 import { useT } from '../../lib/i18n/useT'
+import CurrencyPicker from '../common/CurrencyPicker'
+import ExchangeRatesButton from '../common/ExchangeRatesButton'
 import './FinancePanel.css'
 
 interface RowFormState {
   name: string
   amount: string
+  currency: CurrencyCode
 }
 
-const EMPTY_FORM: RowFormState = { name: '', amount: '' }
+const EMPTY_FORM: RowFormState = { name: '', amount: '', currency: 'USD' }
 const GENERAL_ID = '__general__'
 
 export default function FinancePanel(): JSX.Element {
   const t = useT()
   const savings = useAppStore((s) => s.data?.finance.savings ?? [])
   const checkingBalance = useAppStore((s) => s.data?.finance.checking.balance ?? 0)
+  const checkingCurrency = useAppStore((s) => s.data?.finance.checking.currency ?? 'USD')
   const checkingCategories = useAppStore((s) => s.data?.finance.checking.categories ?? [])
   const updateData = useAppStore((s) => s.updateData)
+  const rates = useRatesStore((s) => s.rates?.rates ?? null)
 
   const [expanded, setExpanded] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -30,13 +37,15 @@ export default function FinancePanel(): JSX.Element {
   const [addingChecking, setAddingChecking] = useState(false)
   const [checkingForm, setCheckingForm] = useState<RowFormState>(EMPTY_FORM)
 
-  const total = savings.reduce((sum, e) => sum + e.amount, 0)
-  const checkingTotal = checkingBalance + checkingCategories.reduce((sum, c) => sum + c.balance, 0)
+  const total = savings.reduce((sum, e) => sum + convertToUsd(e.amount, e.currency, rates), 0)
+  const checkingTotal =
+    convertToUsd(checkingBalance, checkingCurrency, rates) +
+    checkingCategories.reduce((sum, c) => sum + convertToUsd(c.balance, c.currency, rates), 0)
 
   function startEdit(entry: SavingsEntry): void {
     setEditingId(entry.id)
     setAdding(false)
-    setForm({ name: entry.name, amount: String(entry.amount) })
+    setForm({ name: entry.name, amount: String(entry.amount), currency: entry.currency })
   }
 
   function startAdd(): void {
@@ -60,12 +69,14 @@ export default function FinancePanel(): JSX.Element {
         if (entry) {
           entry.name = form.name.trim()
           entry.amount = amount
+          entry.currency = form.currency
         }
       } else {
         draft.finance.savings.push({
           id: newId(),
           name: form.name.trim(),
-          amount
+          amount,
+          currency: form.currency
         })
       }
     })
@@ -78,16 +89,23 @@ export default function FinancePanel(): JSX.Element {
     })
   }
 
+  function setSavingsCurrency(id: string, currency: CurrencyCode): void {
+    updateData((draft) => {
+      const entry = draft.finance.savings.find((e) => e.id === id)
+      if (entry) entry.currency = currency
+    })
+  }
+
   function startEditGeneral(): void {
     setEditingCheckingId(GENERAL_ID)
     setAddingChecking(false)
-    setCheckingForm({ name: '', amount: String(checkingBalance) })
+    setCheckingForm({ name: '', amount: String(checkingBalance), currency: checkingCurrency })
   }
 
   function startEditChecking(entry: CheckingCategory): void {
     setEditingCheckingId(entry.id)
     setAddingChecking(false)
-    setCheckingForm({ name: entry.name, amount: String(entry.balance) })
+    setCheckingForm({ name: entry.name, amount: String(entry.balance), currency: entry.currency })
   }
 
   function startAddChecking(): void {
@@ -108,6 +126,7 @@ export default function FinancePanel(): JSX.Element {
     if (editingCheckingId === GENERAL_ID) {
       updateData((draft) => {
         draft.finance.checking.balance = amount
+        draft.finance.checking.currency = checkingForm.currency
       })
       cancelCheckingForm()
       return
@@ -119,12 +138,14 @@ export default function FinancePanel(): JSX.Element {
         if (category) {
           category.name = checkingForm.name.trim()
           category.balance = amount
+          category.currency = checkingForm.currency
         }
       } else {
         draft.finance.checking.categories.push({
           id: newId(),
           name: checkingForm.name.trim(),
-          balance: amount
+          balance: amount,
+          currency: checkingForm.currency
         })
       }
     })
@@ -135,14 +156,36 @@ export default function FinancePanel(): JSX.Element {
     updateData((draft) => {
       const category = draft.finance.checking.categories.find((c) => c.id === id)
       if (category) {
-        draft.finance.checking.balance += category.balance
+        draft.finance.checking.balance += convert(
+          category.balance,
+          category.currency,
+          draft.finance.checking.currency,
+          rates
+        )
       }
       draft.finance.checking.categories = draft.finance.checking.categories.filter((c) => c.id !== id)
     })
   }
 
+  function setCheckingCategoryCurrency(id: string, currency: CurrencyCode): void {
+    updateData((draft) => {
+      const category = draft.finance.checking.categories.find((c) => c.id === id)
+      if (category) category.currency = currency
+    })
+  }
+
+  function setGeneralCurrency(currency: CurrencyCode): void {
+    updateData((draft) => {
+      draft.finance.checking.currency = currency
+    })
+  }
+
   return (
     <div className="finance-panel">
+      <div className="finance-header">
+        <ExchangeRatesButton />
+      </div>
+
       <button type="button" className="finance-savings-toggle" onClick={() => setCheckingExpanded((v) => !v)}>
         <span>{t('finance.checkingLabel')}</span>
         <span className="finance-savings-total">${checkingTotal.toFixed(2)}</span>
@@ -153,13 +196,19 @@ export default function FinancePanel(): JSX.Element {
           {editingCheckingId === GENERAL_ID ? (
             <div className="finance-row finance-row--form">
               <span className="finance-row-name">{t('finance.categoryGeneralOption')}</span>
-              <input
-                placeholder={t('finance.amountPlaceholder')}
-                value={checkingForm.amount}
-                onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && submitCheckingForm()}
-              />
+              <span className="finance-amount-with-currency">
+                <input
+                  placeholder={t('finance.amountPlaceholder')}
+                  value={checkingForm.amount}
+                  onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && submitCheckingForm()}
+                />
+                <CurrencyPicker
+                  value={checkingForm.currency}
+                  onChange={(c) => setCheckingForm({ ...checkingForm, currency: c })}
+                />
+              </span>
               <button type="button" className="icon-btn" onClick={submitCheckingForm}>
                 ✓
               </button>
@@ -170,7 +219,10 @@ export default function FinancePanel(): JSX.Element {
           ) : (
             <div className="finance-row">
               <span className="finance-row-name">{t('finance.categoryGeneralOption')}</span>
-              <span className="finance-row-amount">${checkingBalance.toFixed(2)}</span>
+              <span className="finance-amount-with-currency">
+                <CurrencyPicker value={checkingCurrency} onChange={setGeneralCurrency} />
+                <span className="finance-row-amount">{checkingBalance.toFixed(2)}</span>
+              </span>
               <button type="button" className="icon-btn" onClick={startEditGeneral} title={t('common.edit')}>
                 ✎
               </button>
@@ -186,11 +238,17 @@ export default function FinancePanel(): JSX.Element {
                   value={checkingForm.name}
                   onChange={(e) => setCheckingForm({ ...checkingForm, name: e.target.value })}
                 />
-                <input
-                  placeholder={t('finance.amountPlaceholder')}
-                  value={checkingForm.amount}
-                  onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
-                />
+                <span className="finance-amount-with-currency">
+                  <input
+                    placeholder={t('finance.amountPlaceholder')}
+                    value={checkingForm.amount}
+                    onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
+                  />
+                  <CurrencyPicker
+                    value={checkingForm.currency}
+                    onChange={(c) => setCheckingForm({ ...checkingForm, currency: c })}
+                  />
+                </span>
                 <button type="button" className="icon-btn" onClick={submitCheckingForm}>
                   ✓
                 </button>
@@ -201,7 +259,13 @@ export default function FinancePanel(): JSX.Element {
             ) : (
               <div className="finance-row" key={entry.id}>
                 <span className="finance-row-name">{entry.name}</span>
-                <span className="finance-row-amount">${entry.balance.toFixed(2)}</span>
+                <span className="finance-amount-with-currency">
+                  <CurrencyPicker
+                    value={entry.currency}
+                    onChange={(c) => setCheckingCategoryCurrency(entry.id, c)}
+                  />
+                  <span className="finance-row-amount">{entry.balance.toFixed(2)}</span>
+                </span>
                 <button
                   type="button"
                   className="icon-btn"
@@ -230,11 +294,17 @@ export default function FinancePanel(): JSX.Element {
                 onChange={(e) => setCheckingForm({ ...checkingForm, name: e.target.value })}
                 autoFocus
               />
-              <input
-                placeholder={t('finance.amountPlaceholder')}
-                value={checkingForm.amount}
-                onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
-              />
+              <span className="finance-amount-with-currency">
+                <input
+                  placeholder={t('finance.amountPlaceholder')}
+                  value={checkingForm.amount}
+                  onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
+                />
+                <CurrencyPicker
+                  value={checkingForm.currency}
+                  onChange={(c) => setCheckingForm({ ...checkingForm, currency: c })}
+                />
+              </span>
               <button type="button" className="icon-btn" onClick={submitCheckingForm}>
                 ✓
               </button>
@@ -265,11 +335,14 @@ export default function FinancePanel(): JSX.Element {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
-                <input
-                  placeholder={t('finance.amountPlaceholder')}
-                  value={form.amount}
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                />
+                <span className="finance-amount-with-currency">
+                  <input
+                    placeholder={t('finance.amountPlaceholder')}
+                    value={form.amount}
+                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  />
+                  <CurrencyPicker value={form.currency} onChange={(c) => setForm({ ...form, currency: c })} />
+                </span>
                 <button type="button" className="icon-btn" onClick={submitForm}>
                   ✓
                 </button>
@@ -280,7 +353,10 @@ export default function FinancePanel(): JSX.Element {
             ) : (
               <div className="finance-row" key={entry.id}>
                 <span className="finance-row-name">{entry.name}</span>
-                <span className="finance-row-amount">${entry.amount.toFixed(2)}</span>
+                <span className="finance-amount-with-currency">
+                  <CurrencyPicker value={entry.currency} onChange={(c) => setSavingsCurrency(entry.id, c)} />
+                  <span className="finance-row-amount">{entry.amount.toFixed(2)}</span>
+                </span>
                 <button type="button" className="icon-btn" onClick={() => startEdit(entry)} title={t('common.edit')}>
                   ✎
                 </button>
@@ -299,11 +375,14 @@ export default function FinancePanel(): JSX.Element {
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 autoFocus
               />
-              <input
-                placeholder={t('finance.amountPlaceholder')}
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              />
+              <span className="finance-amount-with-currency">
+                <input
+                  placeholder={t('finance.amountPlaceholder')}
+                  value={form.amount}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                />
+                <CurrencyPicker value={form.currency} onChange={(c) => setForm({ ...form, currency: c })} />
+              </span>
               <button type="button" className="icon-btn" onClick={submitForm}>
                 ✓
               </button>

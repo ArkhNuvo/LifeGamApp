@@ -74,6 +74,12 @@ const en: Record<TranslationKey, string> = {
   'finance.savingsLabel': 'Savings',
   'finance.amountPlaceholder': 'Amount, $',
   'finance.categoryGeneralOption': 'Uncategorized',
+  'finance.currencyPickerTooltip': 'Change currency',
+  'finance.exchangeRatesTooltip': 'Exchange rates to USD',
+  'finance.noForeignCurrencies': 'No currencies other than USD',
+  'finance.ratesUpdated': 'Updated: {date}',
+  'finance.ratesLoading': 'Loading rates…',
+  'finance.refreshRatesTooltip': 'Refresh rates',
 
   'checkin.emoji.terrible': 'Terrible',
   'checkin.emoji.bad': 'Not great',
@@ -170,13 +176,7 @@ const en: Record<TranslationKey, string> = {
   'kanban.costSignTooltip': 'Cost (click to make it a restore)',
   'kanban.restoreSignTooltip': 'Restore (click to make it a cost)',
   'kanban.createdDateLabel': 'Created date',
-  'kanban.completedDateLabel': 'Completed date',
-  'kanban.completedDateEmptyHint':
-    'Not set — fills in automatically once you mark the activity done',
-  'kanban.setDateButton': 'Set date',
-  'kanban.clearDateTooltip': 'Clear date',
-  'kanban.completedDateHint':
-    "If the date isn't today, the energy cost/restore won't affect today's energy balance.",
+  'kanban.completedDateLabel': 'Realization date',
   'kanban.moveToLabel': 'Move to',
   'kanban.unassignedOption': '— no board —',
   'kanban.moveToKanbanTitle': 'Move to board',

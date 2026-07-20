@@ -83,7 +83,7 @@ function defaultUserData(username: string): UserData {
     totalXp: 0,
     energy: { mental: 100, physical: 100, lastCheckinDate: null },
     finance: {
-      checking: { balance: 0, categories: [] },
+      checking: { balance: 0, currency: 'USD', categories: [] },
       savings: []
     },
     skills: [],
@@ -207,6 +207,15 @@ function normalizeUserData(data: UserData): UserData {
   if (!Array.isArray(data.finance.checking.categories)) {
     data.finance.checking.categories = []
   }
+  if (!data.finance.checking.currency) {
+    data.finance.checking.currency = 'USD'
+  }
+  data.finance.checking.categories.forEach((c) => {
+    if (!c.currency) c.currency = 'USD'
+  })
+  data.finance.savings.forEach((e) => {
+    if (!e.currency) e.currency = 'USD'
+  })
   if (typeof data.profile.displayName === 'undefined') {
     data.profile.displayName = null
   }

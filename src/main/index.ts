@@ -72,6 +72,14 @@ function registerIpcHandlers(): void {
     saveUserData(username, data)
     return true
   })
+  ipcMain.on('data:saveSync', (e, username: string, data: UserData) => {
+    try {
+      saveUserData(username, data)
+      e.returnValue = true
+    } catch {
+      e.returnValue = false
+    }
+  })
   ipcMain.handle('files:pickImage', async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openFile'],

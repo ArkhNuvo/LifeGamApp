@@ -25,7 +25,10 @@ const api = {
   data: {
     load: (username: string): Promise<UserData> => ipcRenderer.invoke('data:load', username),
     save: (username: string, data: UserData): Promise<boolean> =>
-      ipcRenderer.invoke('data:save', username, data)
+      ipcRenderer.invoke('data:save', username, data),
+    /** Blocking save for logout/window-close, where an async invoke might not finish. */
+    saveSync: (username: string, data: UserData): boolean =>
+      ipcRenderer.sendSync('data:saveSync', username, data)
   },
   files: {
     pickImage: (): Promise<string | null> => ipcRenderer.invoke('files:pickImage'),

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
 import { useRatesStore } from '../../state/useRatesStore'
 import { newId } from '../../lib/ids'
-import { convert, convertToUsd } from '../../lib/currency'
+import { canConvert, convert, convertToUsd } from '../../lib/currency'
 import type { CheckingCategory, CurrencyCode, SavingsEntry } from '../../lib/types'
 import { useT } from '../../lib/i18n/useT'
 import CurrencyPicker from '../common/CurrencyPicker'
@@ -89,10 +89,24 @@ export default function FinancePanel(): JSX.Element {
     })
   }
 
+  // Switching an existing balance's currency converts the amount at the
+  // current rate (a real exchange), instead of just relabelling the number —
+  // which would silently change what the money is worth. Without rates for
+  // both currencies the switch is refused rather than guessed.
+  function convertAmount(amount: number, from: CurrencyCode, to: CurrencyCode): number | null {
+    if (from === to) return amount
+    if (!canConvert(from, to, rates)) return null
+    return Math.round(convert(amount, from, to, rates) * 100) / 100
+  }
+
   function setSavingsCurrency(id: string, currency: CurrencyCode): void {
     updateData((draft) => {
       const entry = draft.finance.savings.find((e) => e.id === id)
-      if (entry) entry.currency = currency
+      if (!entry) return
+      const amount = convertAmount(entry.amount, entry.currency, currency)
+      if (amount === null) return
+      entry.amount = amount
+      entry.currency = currency
     })
   }
 
@@ -170,13 +184,21 @@ export default function FinancePanel(): JSX.Element {
   function setCheckingCategoryCurrency(id: string, currency: CurrencyCode): void {
     updateData((draft) => {
       const category = draft.finance.checking.categories.find((c) => c.id === id)
-      if (category) category.currency = currency
+      if (!category) return
+      const balance = convertAmount(category.balance, category.currency, currency)
+      if (balance === null) return
+      category.balance = balance
+      category.currency = currency
     })
   }
 
   function setGeneralCurrency(currency: CurrencyCode): void {
     updateData((draft) => {
-      draft.finance.checking.currency = currency
+      const checking = draft.finance.checking
+      const balance = convertAmount(checking.balance, checking.currency, currency)
+      if (balance === null) return
+      checking.balance = balance
+      checking.currency = currency
     })
   }
 

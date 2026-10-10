@@ -15,8 +15,9 @@ import type {
 function shapeCard(
   card: KanbanCard,
   skills: UserData['skills'],
-  checkingCategories: UserData['finance']['checking']['categories']
+  checking: UserData['finance']['checking']
 ): TelegramCatalogCard {
+  const category = checking.categories.find((c) => c.id === card.checkingCategoryId)
   return {
     id: card.id,
     title: card.title,
@@ -24,7 +25,8 @@ function shapeCard(
     energyMental: card.energyMental,
     energyPhysical: card.energyPhysical,
     money: card.money,
-    checkingCategoryName: checkingCategories.find((c) => c.id === card.checkingCategoryId)?.name ?? null,
+    checkingCategoryName: category?.name ?? null,
+    currency: category?.currency ?? checking.currency,
     done: card.done,
     rewards: card.rewards.map((r) => {
       const skill = skills.find((s) => s.id === r.skillId)
@@ -61,16 +63,16 @@ export function buildCatalogPayload(data: UserData): TelegramCatalogPayload {
       // (covers bot-created cards, which default completedDate to null).
       const isForToday = card.completedDate ? card.completedDate === today : card.createdDate === today
       if (!card.done && isTodoOrPlanned && isForToday) {
-        plannedCards.push(shapeCard(card, data.skills, checkingCategories))
+        plannedCards.push(shapeCard(card, data.skills, data.finance.checking))
       }
       if (!card.done && isTodoOrPlanned) {
-        weekCards.push(shapeCard(card, data.skills, checkingCategories))
+        weekCards.push(shapeCard(card, data.skills, data.finance.checking))
       }
       if (!card.done && col.status === 'IN_PROGRESS') {
-        inProcessCards.push(shapeCard(card, data.skills, checkingCategories))
+        inProcessCards.push(shapeCard(card, data.skills, data.finance.checking))
       }
       if (card.done && card.completedDate === today) {
-        doneTodayCards.push(shapeCard(card, data.skills, checkingCategories))
+        doneTodayCards.push(shapeCard(card, data.skills, data.finance.checking))
       }
     }
   }
@@ -103,13 +105,14 @@ export function buildCatalogPayload(data: UserData): TelegramCatalogPayload {
       0
     ),
     checkingBreakdown,
-    savingsBreakdown
+    savingsBreakdown,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
   }
 
   return {
     skills,
     columns,
-    checkingCategories: checkingCategories.map((c) => ({ id: c.id, name: c.name })),
+    checkingCategories: checkingCategories.map((c) => ({ id: c.id, name: c.name, currency: c.currency })),
     plannedCards,
     doneTodayCards,
     weekCards,

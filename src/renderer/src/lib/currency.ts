@@ -73,3 +73,13 @@ export function convert(
   if (!rate) return usd
   return usd * rate
 }
+
+/** Whether rates are loaded for both currencies, i.e. `convert` would give a real result rather than a fallback. */
+export function canConvert(
+  from: CurrencyCode,
+  to: CurrencyCode,
+  rates: Record<string, number> | null
+): boolean {
+  const has = (c: CurrencyCode): boolean => c === 'USD' || !!rates?.[c]
+  return has(from) && has(to)
+}

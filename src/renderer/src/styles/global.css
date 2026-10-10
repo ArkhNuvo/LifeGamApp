@@ -253,6 +253,12 @@ textarea:focus {
   align-items: center;
 }
 
+.money-currency {
+  min-width: 28px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
 .energy-fields-row {
   display: flex;
   gap: 16px;

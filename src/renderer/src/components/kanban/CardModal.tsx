@@ -4,6 +4,7 @@ import type { CardLocation } from '../../lib/kanbanMove'
 import type { CardReward, KanbanCard } from '../../lib/types'
 import { formatMonthLabel } from '../../lib/month'
 import { todayISO } from '../../lib/date'
+import { CURRENCY_SYMBOLS } from '../../lib/currency'
 import { useT, type TFunction } from '../../lib/i18n/useT'
 import type { TranslationKey } from '../../lib/i18n'
 
@@ -62,6 +63,7 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
   const skills = useAppStore((s) => s.data?.skills ?? [])
   const months = useAppStore((s) => s.data?.kanban.months ?? {})
   const checkingCategories = useAppStore((s) => s.data?.finance.checking.categories ?? [])
+  const generalCurrency = useAppStore((s) => s.data?.finance.checking.currency ?? 'USD')
 
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
@@ -83,6 +85,10 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
 
   const [createdDate, setCreatedDate] = useState(initial?.createdDate ?? todayISO())
   const [completedDate, setCompletedDate] = useState<string | null>(initial?.completedDate ?? null)
+
+  // The money amount is stored in whatever currency its target account uses.
+  const moneyCurrency =
+    checkingCategories.find((c) => c.id === checkingCategoryId)?.currency ?? generalCurrency
 
   const monthOptions = Object.keys(months).sort()
   const initialMonthKey = currentLocation?.type === 'column' ? currentLocation.monthKey : monthOptions[0]
@@ -265,18 +271,22 @@ export default function CardModal({ initial, currentLocation, onCancel, onSave }
               min={0}
               value={moneyAbs}
               onChange={(e) => setMoneyAbs(Number(e.target.value))}
-              placeholder="$"
             />
+            <span className="money-currency" title={moneyCurrency}>
+              {CURRENCY_SYMBOLS[moneyCurrency]}
+            </span>
           </div>
           {checkingCategories.length > 0 && (
             <select
               value={checkingCategoryId ?? ''}
               onChange={(e) => setCheckingCategoryId(e.target.value || null)}
             >
-              <option value="">{t('finance.categoryGeneralOption')}</option>
+              <option value="">
+                {t('finance.categoryGeneralOption')} ({generalCurrency})
+              </option>
               {checkingCategories.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {c.name} ({c.currency})
                 </option>
               ))}
             </select>

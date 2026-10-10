@@ -103,12 +103,36 @@ export function syncCardDoneState(
 }
 
 /**
+ * Applies an edit to a card while keeping already-granted effects in sync.
+ * If the card's XP/money/energy were already applied, they are reverted with
+ * the *old* values before the edit and re-applied with the *new* ones after —
+ * otherwise a later revert (delete, undo, drag out of DONE) would subtract the
+ * edited amounts instead of what was actually granted.
+ */
+export function editCardWithEffects(
+  draft: UserData,
+  card: KanbanCard,
+  mutate: (card: KanbanCard) => void
+): void {
+  const wasApplied = card.effectsApplied
+  if (wasApplied) revertCardEffects(draft, card)
+  mutate(card)
+  if (wasApplied) {
+    if (!card.completedDate) card.completedDate = todayISO()
+    applyCardEffects(draft, card)
+  }
+}
+
+/**
  * Relocates a card into its month's DONE-status column, inserted at the
  * top, then syncs its done state — for sources that flag a card done
  * without themselves performing the physical move (e.g. the Telegram bot).
  * In-app, this normally happens via drag-and-drop; this mirrors that.
- * No-op (falls back to an in-place sync) if the card is unassigned, its
- * month has no DONE column, or it's already sitting in one.
+ * The reverse also holds: un-marking a card that sits in DONE moves it back
+ * to the column it came from (or the first non-DONE column), otherwise it
+ * would be "not done, yet in DONE" and drop out of every bot list.
+ * Falls back to an in-place sync if the card is unassigned or the month has
+ * no suitable column.
  */
 export function moveToDoneColumnAndSync(
   draft: UserData,
@@ -117,13 +141,22 @@ export function moveToDoneColumnAndSync(
   card: KanbanCard,
   desiredDone?: boolean
 ): void {
-  const shouldMigrate = desiredDone === true && column && column.status !== 'DONE' && monthKey
-  if (shouldMigrate) {
-    const doneColumn = draft.kanban.months[monthKey]?.columns.find((c) => c.status === 'DONE')
-    if (doneColumn) {
+  const columns = monthKey ? draft.kanban.months[monthKey]?.columns : undefined
+  if (column && columns) {
+    let target: KanbanColumn | undefined
+    if (desiredDone === true && column.status !== 'DONE') {
+      target = columns.find((c) => c.status === 'DONE')
+      if (target) card.returnColumnId = column.id
+    } else if (desiredDone === false && column.status === 'DONE') {
+      target =
+        columns.find((c) => c.id === card.returnColumnId && c.status !== 'DONE') ??
+        [...columns].sort((a, b) => a.order - b.order).find((c) => c.status !== 'DONE')
+      if (target) delete card.returnColumnId
+    }
+    if (target) {
       column.cards = column.cards.filter((c) => c.id !== card.id)
-      doneColumn.cards.unshift(card)
-      syncCardDoneState(draft, card, doneColumn.status, desiredDone)
+      target.cards.unshift(card)
+      syncCardDoneState(draft, card, target.status, desiredDone)
       return
     }
   }

@@ -1,6 +1,8 @@
 import type { TelegramAction, TelegramCatalogPayload } from '../shared/types'
 
 const API_BASE = 'http://199.247.0.246:8080'
+/** Without a timeout a hung server would stall background sync for minutes. */
+const REQUEST_TIMEOUT_MS = 15_000
 
 interface PairStartResult {
   code: string
@@ -15,7 +17,8 @@ export async function startPairing(username: string): Promise<string> {
   const res = await fetch(`${API_BASE}/pair/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username })
+    body: JSON.stringify({ username }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   })
   if (!res.ok) throw new Error(`pair/start failed: ${res.status}`)
   const data = (await res.json()) as PairStartResult
@@ -23,7 +26,9 @@ export async function startPairing(username: string): Promise<string> {
 }
 
 export async function checkPairingStatus(code: string): Promise<string | null> {
-  const res = await fetch(`${API_BASE}/pair/status?code=${encodeURIComponent(code)}`)
+  const res = await fetch(`${API_BASE}/pair/status?code=${encodeURIComponent(code)}`, {
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+  })
   if (!res.ok) throw new Error(`pair/status failed: ${res.status}`)
   const data = (await res.json()) as PairStatusResult
   return data.paired && data.api_token ? data.api_token : null
@@ -33,14 +38,16 @@ export async function pushCatalog(apiToken: string, payload: TelegramCatalogPayl
   const res = await fetch(`${API_BASE}/sync/catalog`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiToken}` },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   })
   if (!res.ok) throw new Error(`sync/catalog failed: ${res.status}`)
 }
 
 export async function fetchPendingActions(apiToken: string): Promise<TelegramAction[]> {
   const res = await fetch(`${API_BASE}/actions/pending`, {
-    headers: { Authorization: `Bearer ${apiToken}` }
+    headers: { Authorization: `Bearer ${apiToken}` },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   })
   if (!res.ok) throw new Error(`actions/pending failed: ${res.status}`)
   return (await res.json()) as TelegramAction[]
@@ -50,7 +57,8 @@ export async function ackActions(apiToken: string, ids: number[]): Promise<void>
   const res = await fetch(`${API_BASE}/actions/ack`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiToken}` },
-    body: JSON.stringify({ ids })
+    body: JSON.stringify({ ids }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   })
   if (!res.ok) throw new Error(`actions/ack failed: ${res.status}`)
 }

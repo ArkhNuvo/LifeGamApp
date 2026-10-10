@@ -11,7 +11,12 @@ import type {
 } from './types'
 import { newId } from './ids'
 import { buildCatalogPayload, findCardEverywhere } from './kanbanCatalog'
-import { revertCardEffects, syncCardDoneState, moveToDoneColumnAndSync } from './kanbanXp'
+import {
+  revertCardEffects,
+  syncCardDoneState,
+  moveToDoneColumnAndSync,
+  editCardWithEffects
+} from './kanbanXp'
 import { useAppStore } from '../state/useAppStore'
 
 export function startPairing(username: string): Promise<string> {
@@ -35,6 +40,9 @@ export function ackActions(apiToken: string, ids: number[]): Promise<void> {
 }
 
 function applyCreateAction(draft: UserData, payload: TelegramCreateActionPayload): void {
+  // If a previous ack failed, the server re-delivers the same create action —
+  // skip it instead of adding a duplicate card with the same id.
+  if (payload.id && findCardEverywhere(draft, payload.id)) return
   const card: KanbanCard = {
     id: payload.id ?? newId(),
     title: payload.title,
@@ -54,7 +62,14 @@ function applyCreateAction(draft: UserData, payload: TelegramCreateActionPayload
     return
   }
   const { monthKey, columnId } = payload.target
-  const column = draft.kanban.months[monthKey]?.columns.find((c) => c.id === columnId)
+  // The bot computes monthKey from the server's clock, which can disagree
+  // with the user's local month around midnight on the 1st — column ids are
+  // unique, so fall back to finding the column in any month.
+  const column =
+    draft.kanban.months[monthKey]?.columns.find((c) => c.id === columnId) ??
+    Object.values(draft.kanban.months)
+      .flatMap((m) => m.columns)
+      .find((c) => c.id === columnId)
   if (!column) {
     draft.kanban.unassigned.push(card)
     return
@@ -74,7 +89,7 @@ function applyToggleDoneAction(draft: UserData, payload: TelegramToggleDoneActio
 function applyEditAction(draft: UserData, payload: TelegramEditActionPayload): void {
   const found = findCardEverywhere(draft, payload.cardId)
   if (!found) return
-  Object.assign(found.card, payload.patch)
+  editCardWithEffects(draft, found.card, (card) => Object.assign(card, payload.patch))
 }
 
 function applyDeleteAction(draft: UserData, payload: TelegramDeleteActionPayload): void {
@@ -95,6 +110,16 @@ function applySetEnergyAction(draft: UserData, payload: TelegramSetEnergyActionP
 
 let syncInFlight = false
 
+// The catalog is only re-sent when its content changed (or the bot just
+// acted, or it's been a while) — instead of re-uploading identical data
+// every 10 seconds. The periodic re-push is a safety net: the server's
+// optimistic mirror can drift from the app's state in rare cases where a bot
+// action doesn't change anything locally.
+const FORCE_PUSH_INTERVAL_MS = 5 * 60 * 1000
+let lastPushedJson: string | null = null
+let lastPushedToken: string | null = null
+let lastPushAt = 0
+
 /**
  * Pulls and applies any actions queued from the bot, then pushes a fresh
  * catalog reflecting the (possibly just-updated) local state — in that
@@ -108,9 +133,11 @@ export async function syncWithTelegram(apiToken: string): Promise<void> {
   if (syncInFlight) return
   syncInFlight = true
   try {
+    let botActed = false
     try {
       const actions = await fetchPendingActions(apiToken)
       if (actions.length > 0) {
+        botActed = true
         useAppStore.getState().updateData((draft) => {
           for (const action of actions) {
             switch (action.action_type) {
@@ -144,7 +171,14 @@ export async function syncWithTelegram(apiToken: string): Promise<void> {
     try {
       const current = useAppStore.getState().data
       if (current) {
-        await pushCatalog(apiToken, buildCatalogPayload(current))
+        const json = JSON.stringify(buildCatalogPayload(current))
+        const unchanged = json === lastPushedJson && apiToken === lastPushedToken
+        if (!unchanged || botActed || Date.now() - lastPushAt > FORCE_PUSH_INTERVAL_MS) {
+          await pushCatalog(apiToken, JSON.parse(json))
+          lastPushedJson = json
+          lastPushedToken = apiToken
+          lastPushAt = Date.now()
+        }
       }
     } catch {
       // best-effort background sync — silent on network errors

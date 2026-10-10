@@ -32,7 +32,7 @@ interface OpenErApiResponse {
 }
 
 async function fetchFreshRates(): Promise<ExchangeRates> {
-  const res = await fetch(API_URL)
+  const res = await fetch(API_URL, { signal: AbortSignal.timeout(15_000) })
   if (!res.ok) throw new Error(`exchange rate fetch failed: ${res.status}`)
   const data = (await res.json()) as OpenErApiResponse
   if (data.result !== 'success') throw new Error('exchange rate API returned an error result')

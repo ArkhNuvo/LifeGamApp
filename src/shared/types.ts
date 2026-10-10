@@ -24,6 +24,8 @@ export interface KanbanCard {
   completedDate: string | null
   done: boolean
   effectsApplied: boolean
+  /** Column a card was auto-moved out of when marked done from the bot — where an undo puts it back. */
+  returnColumnId?: string
 }
 
 export interface KanbanColumn {
@@ -180,6 +182,8 @@ export interface TelegramCatalogCard {
   money: number
   /** Name of the checking category the money delta is tied to; null = general balance. */
   checkingCategoryName: string | null
+  /** Currency of the account the money delta goes to (category's, else the general checking one). */
+  currency: string
   done: boolean
   rewards: TelegramCatalogCardReward[]
 }
@@ -187,6 +191,7 @@ export interface TelegramCatalogCard {
 export interface TelegramCatalogCheckingCategory {
   id: string
   name: string
+  currency: string
 }
 
 /** One line of a checking/savings breakdown; name null = the general/uncategorized checking bucket. */
@@ -209,6 +214,8 @@ export interface TelegramCatalogResources {
   /** Raw per-entry amounts/currencies, for the bot's "Финансы" drill-down. */
   checkingBreakdown: TelegramCatalogFinanceEntry[]
   savingsBreakdown: TelegramCatalogFinanceEntry[]
+  /** IANA timezone of the app (e.g. "Europe/Warsaw"), so the bot's "today" matches the user's, not the UTC server's. */
+  timezone: string
 }
 
 export interface TelegramCatalogPayload {

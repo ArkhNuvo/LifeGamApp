@@ -1,6 +1,14 @@
 import { app } from 'electron'
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto'
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync
+} from 'fs'
 import { join, extname } from 'path'
 import type { AuthResult, UserData } from '../shared/types'
 
@@ -229,11 +237,35 @@ export function loadUserData(username: string): UserData {
     writeFileSync(path, JSON.stringify(data, null, 2), 'utf-8')
     return data
   }
-  return normalizeUserData(JSON.parse(readFileSync(path, 'utf-8')))
+  try {
+    return normalizeUserData(JSON.parse(readFileSync(path, 'utf-8')))
+  } catch (err) {
+    // data.json is unreadable (e.g. truncated by a crash mid-write on an
+    // older version) — fall back to the last known-good copy instead of
+    // locking the user out of their account.
+    const backup = `${path}.bak`
+    if (existsSync(backup)) {
+      const recovered = normalizeUserData(JSON.parse(readFileSync(backup, 'utf-8')))
+      // Restore data.json right away, so the next save doesn't rotate the
+      // corrupt file into .bak over the only good copy.
+      copyFileSync(backup, path)
+      return recovered
+    }
+    throw err
+  }
 }
 
+/**
+ * Atomic write: the new content goes to a temp file which then replaces
+ * data.json via rename, so a crash or power loss mid-write can never leave a
+ * half-written data.json. The previous version is kept as data.json.bak.
+ */
 export function saveUserData(username: string, data: UserData): void {
-  writeFileSync(userDataPath(username), JSON.stringify(data, null, 2), 'utf-8')
+  const path = userDataPath(username)
+  const tmp = `${path}.tmp`
+  writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8')
+  if (existsSync(path)) copyFileSync(path, `${path}.bak`)
+  renameSync(tmp, path)
 }
 
 export function saveAvatarDataUrl(username: string, dataUrl: string): string {

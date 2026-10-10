@@ -1,12 +1,13 @@
 import { Draggable } from '@hello-pangea/dnd'
 import { useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
-import { syncCardDoneState, revertCardEffects } from '../../lib/kanbanXp'
+import { syncCardDoneState, revertCardEffects, editCardWithEffects } from '../../lib/kanbanXp'
 import { moveCardTo, type CardLocation } from '../../lib/kanbanMove'
 import type { ColumnStatus, KanbanCard } from '../../lib/types'
 import CardModal, { CardFormValues } from './CardModal'
 import { useT } from '../../lib/i18n/useT'
 import { STATUS_LABEL_KEYS } from './statusLabels'
+import { CURRENCY_SYMBOLS } from '../../lib/currency'
 
 interface Props {
   card: KanbanCard
@@ -24,6 +25,12 @@ export default function Card({ card, index, columnId, columnStatus, monthKey }: 
   const t = useT()
   const updateData = useAppStore((s) => s.updateData)
   const skills = useAppStore((s) => s.data?.skills ?? [])
+  const moneyCurrency = useAppStore(
+    (s) =>
+      s.data?.finance.checking.categories.find((c) => c.id === card.checkingCategoryId)?.currency ??
+      s.data?.finance.checking.currency ??
+      'USD'
+  )
   const [editing, setEditing] = useState(false)
 
   function toggleDone(): void {
@@ -41,15 +48,17 @@ export default function Card({ card, index, columnId, columnStatus, monthKey }: 
       const col = draft.kanban.months[monthKey]?.columns.find((c) => c.id === columnId)
       const c = col?.cards.find((c) => c.id === card.id)
       if (!c) return
-      c.title = values.title
-      c.description = values.description
-      c.rewards = values.rewards
-      c.energyMental = values.energyMental
-      c.energyPhysical = values.energyPhysical
-      c.money = values.money
-      c.checkingCategoryId = values.checkingCategoryId
-      c.createdDate = values.createdDate
-      c.completedDate = values.completedDate
+      editCardWithEffects(draft, c, (target) => {
+        target.title = values.title
+        target.description = values.description
+        target.rewards = values.rewards
+        target.energyMental = values.energyMental
+        target.energyPhysical = values.energyPhysical
+        target.money = values.money
+        target.checkingCategoryId = values.checkingCategoryId
+        target.createdDate = values.createdDate
+        target.completedDate = values.completedDate
+      })
 
       const isSameLocation =
         !target || (target.type === 'column' && target.monthKey === monthKey && target.columnId === columnId)
@@ -117,7 +126,13 @@ export default function Card({ card, index, columnId, columnStatus, monthKey }: 
           )}
           <div className="kanban-card-energy">
             🧠 {signed(card.energyMental)}% · 💪 {signed(card.energyPhysical)}%
-            {card.money !== 0 && <> · 💵 {signed(card.money)}$</>}
+            {card.money !== 0 && (
+              <>
+                {' '}
+                · 💵 {signed(card.money)}
+                {CURRENCY_SYMBOLS[moneyCurrency]}
+              </>
+            )}
           </div>
           {editing && (
             <CardModal

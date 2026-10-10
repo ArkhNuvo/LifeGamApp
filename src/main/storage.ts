@@ -152,7 +152,9 @@ export function loginUser(username: string, password: string): AuthResult {
 /** Used only for a previously-remembered session — intentionally skips the password check. */
 export function autoLoginUser(username: string): AuthResult {
   const entries = readIndex()
-  const entry = entries.find((u) => u.username === username)
+  // Case-insensitive, like loginUser — otherwise a session remembered as
+  // "alexaszka" would silently fail to restore for the account "Alexaszka".
+  const entry = entries.find((u) => u.username.toLowerCase() === username.toLowerCase())
   if (!entry) return { ok: false, error: 'user_not_found' }
   return { ok: true, username: entry.username }
 }

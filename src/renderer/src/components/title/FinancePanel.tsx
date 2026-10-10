@@ -3,7 +3,7 @@ import { useAppStore } from '../../state/useAppStore'
 import { useRatesStore } from '../../state/useRatesStore'
 import { newId } from '../../lib/ids'
 import { canConvert, convert, convertToUsd } from '../../lib/currency'
-import type { CheckingCategory, CurrencyCode, SavingsEntry } from '../../lib/types'
+import type { CheckingCategory, CurrencyCode, SavingsEntry, UserData } from '../../lib/types'
 import { useT } from '../../lib/i18n/useT'
 import CurrencyPicker from '../common/CurrencyPicker'
 import ExchangeRatesButton from '../common/ExchangeRatesButton'
@@ -99,6 +99,31 @@ export default function FinancePanel(): JSX.Element {
     return Math.round(convert(amount, from, to, rates) * 100) / 100
   }
 
+  /**
+   * Cards store their money amount in the currency of the account they're
+   * tied to (a category id, or null for the general balance). When that
+   * account's currency changes, their amounts must be converted too —
+   * otherwise a later revert would subtract the old number in the new
+   * currency.
+   */
+  function convertTiedCards(
+    draft: UserData,
+    accountId: string | null,
+    from: CurrencyCode,
+    to: CurrencyCode,
+    retargetTo?: string | null
+  ): void {
+    const cards = [
+      ...Object.values(draft.kanban.months).flatMap((m) => m.columns.flatMap((c) => c.cards)),
+      ...draft.kanban.unassigned
+    ]
+    for (const card of cards) {
+      if ((card.checkingCategoryId ?? null) !== accountId) continue
+      if (card.money) card.money = Math.round(convert(card.money, from, to, rates) * 100) / 100
+      if (retargetTo !== undefined) card.checkingCategoryId = retargetTo
+    }
+  }
+
   function setSavingsCurrency(id: string, currency: CurrencyCode): void {
     updateData((draft) => {
       const entry = draft.finance.savings.find((e) => e.id === id)
@@ -176,6 +201,8 @@ export default function FinancePanel(): JSX.Element {
           draft.finance.checking.currency,
           rates
         )
+        // Its cards now belong to the general balance, in its currency.
+        convertTiedCards(draft, category.id, category.currency, draft.finance.checking.currency, null)
       }
       draft.finance.checking.categories = draft.finance.checking.categories.filter((c) => c.id !== id)
     })
@@ -187,6 +214,7 @@ export default function FinancePanel(): JSX.Element {
       if (!category) return
       const balance = convertAmount(category.balance, category.currency, currency)
       if (balance === null) return
+      convertTiedCards(draft, category.id, category.currency, currency)
       category.balance = balance
       category.currency = currency
     })
@@ -197,6 +225,7 @@ export default function FinancePanel(): JSX.Element {
       const checking = draft.finance.checking
       const balance = convertAmount(checking.balance, checking.currency, currency)
       if (balance === null) return
+      convertTiedCards(draft, null, checking.currency, currency)
       checking.balance = balance
       checking.currency = currency
     })

@@ -1,3 +1,5 @@
+import './EnergyGauge.css'
+
 interface Props {
   percent: number
 }

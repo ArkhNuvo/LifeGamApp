@@ -75,6 +75,7 @@ const hu: Record<TranslationKey, string> = {
   'finance.amountPlaceholder': 'Összeg, $',
   'finance.categoryGeneralOption': 'Kategória nélkül',
   'finance.currencyPickerTooltip': 'Pénznem módosítása',
+  'finance.emptyList': 'Még üres',
   'finance.exchangeRatesTooltip': 'Árfolyamok dollárhoz',
   'finance.noForeignCurrencies': 'Nincs dollártól eltérő pénznem',
   'finance.ratesUpdated': 'Frissítve: {date}',

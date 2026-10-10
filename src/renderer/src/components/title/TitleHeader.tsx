@@ -5,7 +5,7 @@ import DisplayName from './DisplayName'
 import XpBar from '../common/XpBar'
 import './TitleHeader.css'
 
-export default function TitleHeader(): JSX.Element {
+export default function TitleHeader({ children }: { children?: React.ReactNode }): JSX.Element {
   const totalXp = useAppStore((s) => s.data?.totalXp ?? 0)
   const progress = getLevelProgress(totalXp)
 
@@ -20,6 +20,7 @@ export default function TitleHeader(): JSX.Element {
           xpForNextLevel={progress.xpForNextLevel}
           size="lg"
         />
+        {children}
       </div>
     </div>
   )

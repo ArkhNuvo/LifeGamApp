@@ -75,6 +75,7 @@ const ru = {
   'finance.amountPlaceholder': 'Сумма, $',
   'finance.categoryGeneralOption': 'Без категории',
   'finance.currencyPickerTooltip': 'Сменить валюту',
+  'finance.emptyList': 'Пока пусто',
   'finance.exchangeRatesTooltip': 'Курсы валют к доллару',
   'finance.noForeignCurrencies': 'Нет валют, отличных от доллара',
   'finance.ratesUpdated': 'Обновлено: {date}',

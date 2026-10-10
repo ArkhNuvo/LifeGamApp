@@ -80,6 +80,7 @@ const isv: Record<TranslationKey, string> = {
   'finance.amountPlaceholder': 'Suma, $',
   'finance.categoryGeneralOption': 'Bez kategorije',
   'finance.currencyPickerTooltip': 'Změniti valutu',
+  'finance.emptyList': 'Ješče prazno',
   'finance.exchangeRatesTooltip': 'Kursy valut k dolaru',
   'finance.noForeignCurrencies': 'Ne jest valut, inych ot dolara',
   'finance.ratesUpdated': 'Aktualizovano: {date}',

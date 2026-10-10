@@ -7,6 +7,7 @@ import type { CheckingCategory, CurrencyCode, SavingsEntry, UserData } from '../
 import { useT } from '../../lib/i18n/useT'
 import CurrencyPicker from '../common/CurrencyPicker'
 import ExchangeRatesButton from '../common/ExchangeRatesButton'
+import type { FinanceSection } from './ResourceSummary'
 import './FinancePanel.css'
 
 interface RowFormState {
@@ -18,7 +19,12 @@ interface RowFormState {
 const EMPTY_FORM: RowFormState = { name: '', amount: '', currency: 'USD' }
 const GENERAL_ID = '__general__'
 
-export default function FinancePanel(): JSX.Element {
+interface Props {
+  /** Which section the user opened from the resource summary (💲 or 💰). */
+  focus: FinanceSection
+}
+
+export default function FinancePanel({ focus }: Props): JSX.Element {
   const t = useT()
   const savings = useAppStore((s) => s.data?.finance.savings ?? [])
   const checkingBalance = useAppStore((s) => s.data?.finance.checking.balance ?? 0)
@@ -27,12 +33,12 @@ export default function FinancePanel(): JSX.Element {
   const updateData = useAppStore((s) => s.updateData)
   const rates = useRatesStore((s) => s.rates?.rates ?? null)
 
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(focus === 'savings')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState<RowFormState>(EMPTY_FORM)
 
-  const [checkingExpanded, setCheckingExpanded] = useState(false)
+  const [checkingExpanded, setCheckingExpanded] = useState(focus === 'checking')
   const [editingCheckingId, setEditingCheckingId] = useState<string | null>(null)
   const [addingChecking, setAddingChecking] = useState(false)
   const [checkingForm, setCheckingForm] = useState<RowFormState>(EMPTY_FORM)
@@ -237,216 +243,224 @@ export default function FinancePanel(): JSX.Element {
         <ExchangeRatesButton />
       </div>
 
-      <button type="button" className="finance-savings-toggle" onClick={() => setCheckingExpanded((v) => !v)}>
-        <span>{t('finance.checkingLabel')}</span>
-        <span className="finance-savings-total">${checkingTotal.toFixed(2)}</span>
-      </button>
+      {focus === 'checking' && (
+        <>
+          <button type="button" className="finance-savings-toggle" onClick={() => setCheckingExpanded((v) => !v)}>
+            <span>{t('finance.checkingLabel')}</span>
+            <span className="finance-savings-total">${checkingTotal.toFixed(2)}</span>
+          </button>
 
-      {checkingExpanded && (
-        <div className="finance-savings-list">
-          {editingCheckingId === GENERAL_ID ? (
-            <div className="finance-row finance-row--form">
-              <span className="finance-row-name">{t('finance.categoryGeneralOption')}</span>
-              <span className="finance-amount-with-currency">
-                <input
-                  placeholder={t('finance.amountPlaceholder')}
-                  value={checkingForm.amount}
-                  onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
-                  autoFocus
-                  onKeyDown={(e) => e.key === 'Enter' && submitCheckingForm()}
-                />
-                <CurrencyPicker
-                  value={checkingForm.currency}
-                  onChange={(c) => setCheckingForm({ ...checkingForm, currency: c })}
-                />
-              </span>
-              <button type="button" className="icon-btn" onClick={submitCheckingForm}>
-                ✓
-              </button>
-              <button type="button" className="icon-btn" onClick={cancelCheckingForm}>
-                ✕
-              </button>
-            </div>
-          ) : (
-            <div className="finance-row">
-              <span className="finance-row-name">{t('finance.categoryGeneralOption')}</span>
-              <span className="finance-amount-with-currency">
-                <CurrencyPicker value={checkingCurrency} onChange={setGeneralCurrency} />
-                <span className="finance-row-amount">{checkingBalance.toFixed(2)}</span>
-              </span>
-              <button type="button" className="icon-btn" onClick={startEditGeneral} title={t('common.edit')}>
-                ✎
-              </button>
-              <span />
-            </div>
-          )}
+          {checkingExpanded && (
+            <div className="finance-savings-list">
+              {editingCheckingId === GENERAL_ID ? (
+                <div className="finance-row finance-row--form">
+                  <span className="finance-row-name">{t('finance.categoryGeneralOption')}</span>
+                  <span className="finance-amount-with-currency">
+                    <input
+                      placeholder={t('finance.amountPlaceholder')}
+                      value={checkingForm.amount}
+                      onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
+                      autoFocus
+                      onKeyDown={(e) => e.key === 'Enter' && submitCheckingForm()}
+                    />
+                    <CurrencyPicker
+                      value={checkingForm.currency}
+                      onChange={(c) => setCheckingForm({ ...checkingForm, currency: c })}
+                    />
+                  </span>
+                  <button type="button" className="icon-btn" onClick={submitCheckingForm}>
+                    ✓
+                  </button>
+                  <button type="button" className="icon-btn" onClick={cancelCheckingForm}>
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="finance-row">
+                  <span className="finance-row-name">{t('finance.categoryGeneralOption')}</span>
+                  <span className="finance-amount-with-currency">
+                    <CurrencyPicker value={checkingCurrency} onChange={setGeneralCurrency} />
+                    <span className="finance-row-amount">{checkingBalance.toFixed(2)}</span>
+                  </span>
+                  <button type="button" className="icon-btn" onClick={startEditGeneral} title={t('common.edit')}>
+                    ✎
+                  </button>
+                  <span />
+                </div>
+              )}
 
-          {checkingCategories.map((entry) =>
-            editingCheckingId === entry.id ? (
-              <div className="finance-row finance-row--form" key={entry.id}>
-                <input
-                  placeholder={t('common.nameLabel')}
-                  value={checkingForm.name}
-                  onChange={(e) => setCheckingForm({ ...checkingForm, name: e.target.value })}
-                />
-                <span className="finance-amount-with-currency">
+              {checkingCategories.map((entry) =>
+                editingCheckingId === entry.id ? (
+                  <div className="finance-row finance-row--form" key={entry.id}>
+                    <input
+                      placeholder={t('common.nameLabel')}
+                      value={checkingForm.name}
+                      onChange={(e) => setCheckingForm({ ...checkingForm, name: e.target.value })}
+                    />
+                    <span className="finance-amount-with-currency">
+                      <input
+                        placeholder={t('finance.amountPlaceholder')}
+                        value={checkingForm.amount}
+                        onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
+                      />
+                      <CurrencyPicker
+                        value={checkingForm.currency}
+                        onChange={(c) => setCheckingForm({ ...checkingForm, currency: c })}
+                      />
+                    </span>
+                    <button type="button" className="icon-btn" onClick={submitCheckingForm}>
+                      ✓
+                    </button>
+                    <button type="button" className="icon-btn" onClick={cancelCheckingForm}>
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div className="finance-row" key={entry.id}>
+                    <span className="finance-row-name">{entry.name}</span>
+                    <span className="finance-amount-with-currency">
+                      <CurrencyPicker
+                        value={entry.currency}
+                        onChange={(c) => setCheckingCategoryCurrency(entry.id, c)}
+                      />
+                      <span className="finance-row-amount">{entry.balance.toFixed(2)}</span>
+                    </span>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      onClick={() => startEditChecking(entry)}
+                      title={t('common.edit')}
+                    >
+                      ✎
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      onClick={() => removeCheckingCategory(entry.id)}
+                      title={t('common.delete')}
+                    >
+                      🗑
+                    </button>
+                  </div>
+                )
+              )}
+
+              {addingChecking ? (
+                <div className="finance-row finance-row--form">
                   <input
-                    placeholder={t('finance.amountPlaceholder')}
-                    value={checkingForm.amount}
-                    onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
+                    placeholder={t('common.nameLabel')}
+                    value={checkingForm.name}
+                    onChange={(e) => setCheckingForm({ ...checkingForm, name: e.target.value })}
+                    autoFocus
                   />
-                  <CurrencyPicker
-                    value={checkingForm.currency}
-                    onChange={(c) => setCheckingForm({ ...checkingForm, currency: c })}
-                  />
-                </span>
-                <button type="button" className="icon-btn" onClick={submitCheckingForm}>
-                  ✓
+                  <span className="finance-amount-with-currency">
+                    <input
+                      placeholder={t('finance.amountPlaceholder')}
+                      value={checkingForm.amount}
+                      onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
+                    />
+                    <CurrencyPicker
+                      value={checkingForm.currency}
+                      onChange={(c) => setCheckingForm({ ...checkingForm, currency: c })}
+                    />
+                  </span>
+                  <button type="button" className="icon-btn" onClick={submitCheckingForm}>
+                    ✓
+                  </button>
+                  <button type="button" className="icon-btn" onClick={cancelCheckingForm}>
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="finance-add-row" onClick={startAddChecking}>
+                  +
                 </button>
-                <button type="button" className="icon-btn" onClick={cancelCheckingForm}>
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <div className="finance-row" key={entry.id}>
-                <span className="finance-row-name">{entry.name}</span>
-                <span className="finance-amount-with-currency">
-                  <CurrencyPicker
-                    value={entry.currency}
-                    onChange={(c) => setCheckingCategoryCurrency(entry.id, c)}
-                  />
-                  <span className="finance-row-amount">{entry.balance.toFixed(2)}</span>
-                </span>
-                <button
-                  type="button"
-                  className="icon-btn"
-                  onClick={() => startEditChecking(entry)}
-                  title={t('common.edit')}
-                >
-                  ✎
-                </button>
-                <button
-                  type="button"
-                  className="icon-btn"
-                  onClick={() => removeCheckingCategory(entry.id)}
-                  title={t('common.delete')}
-                >
-                  🗑
-                </button>
-              </div>
-            )
-          )}
-
-          {addingChecking ? (
-            <div className="finance-row finance-row--form">
-              <input
-                placeholder={t('common.nameLabel')}
-                value={checkingForm.name}
-                onChange={(e) => setCheckingForm({ ...checkingForm, name: e.target.value })}
-                autoFocus
-              />
-              <span className="finance-amount-with-currency">
-                <input
-                  placeholder={t('finance.amountPlaceholder')}
-                  value={checkingForm.amount}
-                  onChange={(e) => setCheckingForm({ ...checkingForm, amount: e.target.value })}
-                />
-                <CurrencyPicker
-                  value={checkingForm.currency}
-                  onChange={(c) => setCheckingForm({ ...checkingForm, currency: c })}
-                />
-              </span>
-              <button type="button" className="icon-btn" onClick={submitCheckingForm}>
-                ✓
-              </button>
-              <button type="button" className="icon-btn" onClick={cancelCheckingForm}>
-                ✕
-              </button>
+              )}
             </div>
-          ) : (
-            <button type="button" className="finance-add-row" onClick={startAddChecking}>
-              +
-            </button>
           )}
-        </div>
+        </>
       )}
 
-      <button type="button" className="finance-savings-toggle" onClick={() => setExpanded((v) => !v)}>
-        <span>{t('finance.savingsLabel')}</span>
-        <span className="finance-savings-total">${total.toFixed(2)}</span>
-      </button>
+      {focus === 'savings' && (
+        <>
+          <button type="button" className="finance-savings-toggle" onClick={() => setExpanded((v) => !v)}>
+            <span>{t('finance.savingsLabel')}</span>
+            <span className="finance-savings-total">${total.toFixed(2)}</span>
+          </button>
 
-      {expanded && (
-        <div className="finance-savings-list">
-          {savings.map((entry) =>
-            editingId === entry.id ? (
-              <div className="finance-row finance-row--form" key={entry.id}>
-                <input
-                  placeholder={t('common.nameLabel')}
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-                <span className="finance-amount-with-currency">
+          {expanded && (
+            <div className="finance-savings-list">
+              {savings.map((entry) =>
+                editingId === entry.id ? (
+                  <div className="finance-row finance-row--form" key={entry.id}>
+                    <input
+                      placeholder={t('common.nameLabel')}
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    />
+                    <span className="finance-amount-with-currency">
+                      <input
+                        placeholder={t('finance.amountPlaceholder')}
+                        value={form.amount}
+                        onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                      />
+                      <CurrencyPicker value={form.currency} onChange={(c) => setForm({ ...form, currency: c })} />
+                    </span>
+                    <button type="button" className="icon-btn" onClick={submitForm}>
+                      ✓
+                    </button>
+                    <button type="button" className="icon-btn" onClick={cancelForm}>
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div className="finance-row" key={entry.id}>
+                    <span className="finance-row-name">{entry.name}</span>
+                    <span className="finance-amount-with-currency">
+                      <CurrencyPicker value={entry.currency} onChange={(c) => setSavingsCurrency(entry.id, c)} />
+                      <span className="finance-row-amount">{entry.amount.toFixed(2)}</span>
+                    </span>
+                    <button type="button" className="icon-btn" onClick={() => startEdit(entry)} title={t('common.edit')}>
+                      ✎
+                    </button>
+                    <button type="button" className="icon-btn" onClick={() => removeEntry(entry.id)} title={t('common.delete')}>
+                      🗑
+                    </button>
+                  </div>
+                )
+              )}
+
+              {adding ? (
+                <div className="finance-row finance-row--form">
                   <input
-                    placeholder={t('finance.amountPlaceholder')}
-                    value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    placeholder={t('common.nameLabel')}
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    autoFocus
                   />
-                  <CurrencyPicker value={form.currency} onChange={(c) => setForm({ ...form, currency: c })} />
-                </span>
-                <button type="button" className="icon-btn" onClick={submitForm}>
-                  ✓
+                  <span className="finance-amount-with-currency">
+                    <input
+                      placeholder={t('finance.amountPlaceholder')}
+                      value={form.amount}
+                      onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    />
+                    <CurrencyPicker value={form.currency} onChange={(c) => setForm({ ...form, currency: c })} />
+                  </span>
+                  <button type="button" className="icon-btn" onClick={submitForm}>
+                    ✓
+                  </button>
+                  <button type="button" className="icon-btn" onClick={cancelForm}>
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="finance-add-row" onClick={startAdd}>
+                  +
                 </button>
-                <button type="button" className="icon-btn" onClick={cancelForm}>
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <div className="finance-row" key={entry.id}>
-                <span className="finance-row-name">{entry.name}</span>
-                <span className="finance-amount-with-currency">
-                  <CurrencyPicker value={entry.currency} onChange={(c) => setSavingsCurrency(entry.id, c)} />
-                  <span className="finance-row-amount">{entry.amount.toFixed(2)}</span>
-                </span>
-                <button type="button" className="icon-btn" onClick={() => startEdit(entry)} title={t('common.edit')}>
-                  ✎
-                </button>
-                <button type="button" className="icon-btn" onClick={() => removeEntry(entry.id)} title={t('common.delete')}>
-                  🗑
-                </button>
-              </div>
-            )
-          )}
-
-          {adding ? (
-            <div className="finance-row finance-row--form">
-              <input
-                placeholder={t('common.nameLabel')}
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                autoFocus
-              />
-              <span className="finance-amount-with-currency">
-                <input
-                  placeholder={t('finance.amountPlaceholder')}
-                  value={form.amount}
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                />
-                <CurrencyPicker value={form.currency} onChange={(c) => setForm({ ...form, currency: c })} />
-              </span>
-              <button type="button" className="icon-btn" onClick={submitForm}>
-                ✓
-              </button>
-              <button type="button" className="icon-btn" onClick={cancelForm}>
-                ✕
-              </button>
+              )}
             </div>
-          ) : (
-            <button type="button" className="finance-add-row" onClick={startAdd}>
-              +
-            </button>
           )}
-        </div>
+        </>
       )}
     </div>
   )

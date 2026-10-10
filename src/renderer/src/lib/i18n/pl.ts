@@ -75,6 +75,7 @@ const pl: Record<TranslationKey, string> = {
   'finance.amountPlaceholder': 'Kwota, $',
   'finance.categoryGeneralOption': 'Bez kategorii',
   'finance.currencyPickerTooltip': 'Zmień walutę',
+  'finance.emptyList': 'Na razie pusto',
   'finance.exchangeRatesTooltip': 'Kursy walut do dolara',
   'finance.noForeignCurrencies': 'Brak walut innych niż dolar',
   'finance.ratesUpdated': 'Zaktualizowano: {date}',

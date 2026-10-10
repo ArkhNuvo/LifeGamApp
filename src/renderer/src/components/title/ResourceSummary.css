@@ -1,0 +1,117 @@
+.resource-summary {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.resource-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Plain, borderless click targets — they shouldn't look like buttons */
+.resource-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: 24px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-0);
+  cursor: pointer;
+  text-align: left;
+}
+
+/* Compact versions of the energy gauges */
+.resource-item .energy-row {
+  gap: 6px;
+}
+
+.resource-item .energy-icon {
+  width: 30px;
+  height: 15px;
+}
+
+.resource-item .emoji-gauge {
+  font-size: 16px;
+  width: 30px;
+  height: 17px;
+  text-align: center;
+}
+
+.resource-item .energy-percent {
+  /* Same as the smaller of the two icons' heights (battery: 15px) */
+  font-size: 15px;
+  min-width: 0;
+}
+
+.resource-money-icon {
+  font-size: 16px;
+  width: 22px;
+  text-align: center;
+}
+
+.resource-money-value {
+  font-size: 15px;
+  font-weight: 600;
+  min-width: 44px;
+}
+
+/* Read-only hover list */
+.resource-hover {
+  position: relative;
+}
+
+.resource-tooltip {
+  display: none;
+  /* To the right of the icon, so it doesn't cover the neighbouring row */
+  position: absolute;
+  top: 0;
+  left: calc(100% + 6px);
+  z-index: 20;
+  min-width: 200px;
+  max-width: 280px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 8px 10px;
+}
+
+.resource-hover:hover .resource-tooltip {
+  display: block;
+}
+
+.resource-tooltip-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+
+.resource-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  padding: 2px 0;
+}
+
+.resource-tooltip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resource-tooltip-amount {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.resource-tooltip-empty {
+  font-size: 12px;
+  color: var(--text-2);
+}

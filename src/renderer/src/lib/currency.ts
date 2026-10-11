@@ -11,7 +11,29 @@ export const CURRENCIES: CurrencyCode[] = [
   'CZK',
   'HUF',
   'JPY',
-  'CNY'
+  'CNY',
+  'SEK',
+  'NOK',
+  'DKK',
+  'CAD',
+  'AUD',
+  'NZD',
+  'TRY',
+  'BYN',
+  'KZT',
+  'GEL',
+  'AMD',
+  'AED',
+  'ILS',
+  'INR',
+  'KRW',
+  'BRL',
+  'MXN',
+  'ZAR',
+  'SGD',
+  'HKD',
+  'RON',
+  'BGN'
 ]
 
 export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
@@ -25,7 +47,39 @@ export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
   CZK: 'Kč',
   HUF: 'Ft',
   JPY: '¥',
-  CNY: '¥'
+  CNY: '¥',
+  SEK: 'kr',
+  NOK: 'kr',
+  DKK: 'kr',
+  CAD: 'C$',
+  AUD: 'A$',
+  NZD: 'NZ$',
+  TRY: '₺',
+  BYN: 'Br',
+  KZT: '₸',
+  GEL: '₾',
+  AMD: '֏',
+  AED: 'AED',
+  ILS: '₪',
+  INR: '₹',
+  KRW: '₩',
+  BRL: 'R$',
+  MXN: 'MX$',
+  ZAR: 'R',
+  SGD: 'S$',
+  HKD: 'HK$',
+  RON: 'lei',
+  BGN: 'лв'
+}
+
+/** Localised currency name ("US dollar", "доллар США"), for search and labels. */
+export function currencyName(code: CurrencyCode, language: string): string {
+  const locale = language === 'isv' ? 'sl' : language
+  try {
+    return new Intl.DisplayNames([locale], { type: 'currency' }).of(code) ?? code
+  } catch {
+    return code
+  }
 }
 
 /** Converts an amount in `currency` to USD using a 1-USD-per-`rates[code]` rate table. Falls back to the raw amount if rates aren't loaded yet. */

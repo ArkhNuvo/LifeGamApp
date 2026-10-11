@@ -1,6 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type {
+  AiExtractRequest,
+  AiExtractResult,
+  AiStatus,
   AuthResult,
+  PickedFile,
   ExchangeRates,
   TelegramAction,
   TelegramCatalogPayload,
@@ -35,6 +39,20 @@ const api = {
     saveAvatar: (username: string, dataUrl: string): Promise<string> =>
       ipcRenderer.invoke('files:saveAvatar', username, dataUrl),
     readAsDataUrl: (path: string): Promise<string> => ipcRenderer.invoke('files:readAsDataUrl', path)
+  },
+  attachments: {
+    /** Opens a file dialog (photo or PDF) and returns the file's contents. */
+    pick: (): Promise<PickedFile | { error: 'too_big' } | null> => ipcRenderer.invoke('attachments:pick'),
+    save: (username: string, mime: string, dataBase64: string): Promise<string> =>
+      ipcRenderer.invoke('attachments:save', username, mime, dataBase64),
+    read: (path: string): Promise<string> => ipcRenderer.invoke('attachments:read', path),
+    remove: (path: string): Promise<boolean> => ipcRenderer.invoke('attachments:remove', path)
+  },
+  ai: {
+    status: (): Promise<AiStatus> => ipcRenderer.invoke('ai:status'),
+    setConfig: (update: { apiKey?: string | null; model?: string }): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('ai:setConfig', update),
+    extract: (req: AiExtractRequest): Promise<AiExtractResult> => ipcRenderer.invoke('ai:extract', req)
   },
   telegram: {
     startPairing: (username: string): Promise<string> =>

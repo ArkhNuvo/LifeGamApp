@@ -1,21 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
 import { useRatesStore } from '../../state/useRatesStore'
-import { convertToUsd, CURRENCY_SYMBOLS } from '../../lib/currency'
+import { useModuleStore } from '../../state/useModuleStore'
+import { canConvert, convert, CURRENCY_SYMBOLS } from '../../lib/currency'
 import type { CurrencyCode } from '../../lib/types'
 import { useT } from '../../lib/i18n/useT'
+import { formatMain } from '../finance/useFinance'
 import EnergyBattery from './EnergyBattery'
 import EnergyBicep from './EnergyBicep'
 import EnergyQuizModal from './EnergyQuizModal'
 import './ResourceSummary.css'
 
-export type FinanceSection = 'checking' | 'savings'
-
-interface Props {
-  /** Which finance section is currently open below (for the active highlight). */
-  openSection: FinanceSection | null
-  onOpenFinance: (section: FinanceSection) => void
-}
 
 interface Entry {
   name: string
@@ -31,11 +26,15 @@ function formatAmount(n: number): string {
 function EntryList({
   title,
   entries,
-  emptyText
+  emptyText,
+  main,
+  rates
 }: {
   title: string
   entries: Entry[]
   emptyText: string
+  main: CurrencyCode
+  rates: Record<string, number> | null
 }): JSX.Element {
   return (
     <div className="resource-tooltip" role="tooltip">
@@ -48,6 +47,11 @@ function EntryList({
             <span className="resource-tooltip-name">{e.name}</span>
             <span className="resource-tooltip-amount">
               {formatAmount(e.amount)} {CURRENCY_SYMBOLS[e.currency]}
+              {e.currency !== main && canConvert(e.currency, main, rates) && (
+                <small className="resource-tooltip-converted">
+                  ≈ {formatMain(convert(e.amount, e.currency, main, rates), main)}
+                </small>
+              )}
             </span>
           </div>
         ))
@@ -56,7 +60,8 @@ function EntryList({
   )
 }
 
-export default function ResourceSummary({ openSection, onOpenFinance }: Props): JSX.Element {
+export default function ResourceSummary(): JSX.Element {
+  const setModule = useModuleStore((s) => s.setModule)
   const t = useT()
   const energy = useAppStore((s) => s.data?.energy)
   const checking = useAppStore((s) => s.data?.finance.checking)
@@ -90,8 +95,12 @@ export default function ResourceSummary({ openSection, onOpenFinance }: Props): 
     amount: e.amount,
     currency: e.currency
   }))
-  const total = (entries: Entry[]): number =>
-    Math.round(entries.reduce((sum, e) => sum + convertToUsd(e.amount, e.currency, rates), 0))
+  const main = useAppStore((s) => s.data?.settings.mainCurrency ?? 'USD')
+  const total = (entries: Entry[]): string =>
+    formatMain(
+      entries.reduce((sum, e) => sum + convert(e.amount, e.currency, main, rates), 0),
+      main
+    )
 
   return (
     <div className="resource-summary">
@@ -118,8 +127,8 @@ export default function ResourceSummary({ openSection, onOpenFinance }: Props): 
         <div className="resource-hover">
           <button
             type="button"
-            className={`resource-item resource-money${openSection === 'checking' ? ' active' : ''}`}
-            onClick={() => onOpenFinance('checking')}
+            className="resource-item resource-money"
+            onClick={() => setModule('finance')}
           >
             <span className="resource-money-icon">💲</span>
             <span className="resource-money-value">{total(checkingEntries)}</span>
@@ -128,13 +137,15 @@ export default function ResourceSummary({ openSection, onOpenFinance }: Props): 
             title={t('finance.checkingLabel')}
             entries={checkingEntries}
             emptyText={t('finance.emptyList')}
+            main={main}
+            rates={rates}
           />
         </div>
         <div className="resource-hover">
           <button
             type="button"
-            className={`resource-item resource-money${openSection === 'savings' ? ' active' : ''}`}
-            onClick={() => onOpenFinance('savings')}
+            className="resource-item resource-money"
+            onClick={() => setModule('finance')}
           >
             <span className="resource-money-icon">💰</span>
             <span className="resource-money-value">{total(savingsEntries)}</span>
@@ -143,6 +154,8 @@ export default function ResourceSummary({ openSection, onOpenFinance }: Props): 
             title={t('finance.savingsLabel')}
             entries={savingsEntries}
             emptyText={t('finance.emptyList')}
+            main={main}
+            rates={rates}
           />
         </div>
       </div>

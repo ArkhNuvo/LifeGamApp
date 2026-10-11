@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { produce, setAutoFreeze } from 'immer'
 import type { UserData } from '../lib/types'
+import { useModuleStore } from './useModuleStore'
 
 interface AppState {
   username: string | null
@@ -99,6 +100,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   logout: () => {
     flushPendingSave()
+    useModuleStore.getState().setModule('life')
     window.api.auth.setRememberedUsername(null)
     set({ username: null, data: null, status: 'idle', error: null })
   },

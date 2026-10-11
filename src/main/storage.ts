@@ -9,7 +9,7 @@ import {
   unlinkSync,
   writeFileSync
 } from 'fs'
-import { join, extname } from 'path'
+import { join, extname, resolve, sep } from 'path'
 import type { AuthResult, UserData } from '../shared/types'
 
 interface UserIndexEntry {
@@ -94,6 +94,8 @@ function defaultUserData(username: string): UserData {
       checking: { balance: 0, currency: 'USD', categories: [] },
       savings: []
     },
+    settings: { mainCurrency: 'USD' },
+    ledger: { counterparties: [], events: [], subscriptions: [] },
     skills: [],
     kanban: {
       months: {},
@@ -226,6 +228,18 @@ function normalizeUserData(data: UserData): UserData {
   data.finance.savings.forEach((e) => {
     if (!e.currency) e.currency = 'USD'
   })
+  if (!data.settings || !data.settings.mainCurrency) {
+    data.settings = { mainCurrency: 'USD' }
+  }
+  if (!data.ledger) {
+    data.ledger = { counterparties: [], events: [], subscriptions: [] }
+  }
+  if (!Array.isArray(data.ledger.counterparties)) data.ledger.counterparties = []
+  if (!Array.isArray(data.ledger.events)) data.ledger.events = []
+  if (!Array.isArray(data.ledger.subscriptions)) data.ledger.subscriptions = []
+  data.ledger.events.forEach((e) => {
+    if (!Array.isArray(e.attachments)) e.attachments = []
+  })
   if (typeof data.profile.displayName === 'undefined') {
     data.profile.displayName = null
   }
@@ -280,6 +294,7 @@ export function saveAvatarDataUrl(username: string, dataUrl: string): string {
 }
 
 const MIME_BY_EXT: Record<string, string> = {
+  '.pdf': 'application/pdf',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -292,4 +307,42 @@ export function readFileAsDataUrl(path: string): string {
   const mime = MIME_BY_EXT[ext] ?? 'application/octet-stream'
   const data = readFileSync(path).toString('base64')
   return `data:${mime};base64,${data}`
+}
+
+const EXT_BY_MIME: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'application/pdf': '.pdf'
+}
+
+/** Stored attachments live in <user dir>/attachments; anything outside that folder is refused. */
+function attachmentsDir(username: string): string {
+  const dir = join(userDir(username), 'attachments')
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+  return dir
+}
+
+function isInsideUsersRoot(path: string): boolean {
+  const root = resolve(usersRoot()) + sep
+  return resolve(path).startsWith(root)
+}
+
+export function saveAttachment(username: string, mime: string, dataBase64: string): string {
+  const ext = EXT_BY_MIME[mime]
+  if (!ext) throw new Error('Unsupported attachment type')
+  const dest = join(attachmentsDir(username), `${randomBytes(12).toString('hex')}${ext}`)
+  writeFileSync(dest, Buffer.from(dataBase64, 'base64'))
+  return dest
+}
+
+export function readAttachmentAsDataUrl(path: string): string {
+  if (!isInsideUsersRoot(path)) throw new Error('Path outside the user data folder')
+  return readFileAsDataUrl(path)
+}
+
+export function removeAttachment(path: string): void {
+  if (!isInsideUsersRoot(path)) return
+  if (existsSync(path)) unlinkSync(path)
 }

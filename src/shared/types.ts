@@ -66,6 +66,28 @@ export type CurrencyCode =
   | 'HUF'
   | 'JPY'
   | 'CNY'
+  | 'SEK'
+  | 'NOK'
+  | 'DKK'
+  | 'CAD'
+  | 'AUD'
+  | 'NZD'
+  | 'TRY'
+  | 'BYN'
+  | 'KZT'
+  | 'GEL'
+  | 'AMD'
+  | 'AED'
+  | 'ILS'
+  | 'INR'
+  | 'KRW'
+  | 'BRL'
+  | 'MXN'
+  | 'ZAR'
+  | 'SGD'
+  | 'HKD'
+  | 'RON'
+  | 'BGN'
 
 /** Cached daily snapshot of exchange rates against USD (1 USD = rates[code] units of that currency). */
 export interface ExchangeRates {
@@ -86,6 +108,120 @@ export interface CheckingCategory {
   name: string
   balance: number
   currency: CurrencyCode
+}
+
+export type LedgerEventType = 'expense' | 'income' | 'transfer'
+export type Recurrence = 'week' | 'month' | 'year'
+export type CounterpartyKind = 'service' | 'shop' | 'person' | 'organization'
+
+/** A document (receipt, invoice, payment confirmation) stored alongside an event. */
+export interface Attachment {
+  id: string
+  name: string
+  mime: string
+  /** Absolute path of the stored copy inside the app's user data folder. */
+  path: string
+}
+
+/** A file chosen from disk, held in memory until it is attached to an event. */
+export interface PickedFile {
+  name: string
+  mime: string
+  size: number
+  dataBase64: string
+}
+
+/** What the AI read from a document; every field may be null when it isn't on the document. */
+export interface AiExtraction {
+  eventType: 'expense' | 'income' | 'transfer'
+  amount: number | null
+  currency: string | null
+  date: string | null
+  merchant: string | null
+  description: string | null
+  category: string | null
+  recurrence: 'none' | 'week' | 'month' | 'year'
+  documentType: string
+  confidence: 'low' | 'medium' | 'high'
+  notes: string | null
+}
+
+export interface AiExtractRequest {
+  dataBase64: string
+  mime: string
+  language: string
+  today: string
+  categories: string[]
+  counterparties: string[]
+}
+
+export type AiExtractResult =
+  | { ok: true; data: AiExtraction }
+  | { ok: false; code: 'no_key' | 'auth' | 'rate' | 'bad_input' | 'other'; error: string }
+
+export interface AiStatus {
+  hasKey: boolean
+  model: string
+  encryptionAvailable: boolean
+}
+
+/** A service, shop, person or organization events can be tied to (the hidden "who" registry). */
+export interface Counterparty {
+  id: string
+  name: string
+  kind: CounterpartyKind
+  defaultCategory: string
+}
+
+/**
+ * One financial event ("card"). Amounts are always positive and expressed in
+ * the currency of the account they touch; the type decides the direction.
+ * Only `confirmed` events count towards balances and metrics — planned
+ * (future or unpaid) ones are shown but ignored until the user confirms them.
+ */
+export interface LedgerEvent {
+  id: string
+  type: LedgerEventType
+  title: string
+  amount: number
+  /** General checking balance ('__general__'), a checking category id or a savings entry id. */
+  accountId: string
+  /** Transfers only: destination account and the amount credited there (its own currency). */
+  toAccountId: string | null
+  toAmount: number | null
+  date: string
+  category: string
+  counterpartyId: string | null
+  /** Set when the event was generated from a subscription template. */
+  subscriptionId: string | null
+  confirmed: boolean
+  /** Whether this event's amount is currently reflected in account balances. */
+  effectsApplied: boolean
+  /** Receipts, invoices and payment confirmations kept with the event. */
+  attachments: Attachment[]
+  /** Set by the CSV import on rows that look like a transfer between own accounts; cleared when the event is saved by hand. */
+  review?: 'transfer' | null
+}
+
+/** A recurring payment template; its occurrences are materialised as planned events. */
+export interface Subscription {
+  id: string
+  title: string
+  amount: number
+  accountId: string
+  category: string
+  counterpartyId: string | null
+  every: Recurrence
+  startDate: string
+  /** How many occurrences (counted from startDate) have been generated as events so far. */
+  generated: number
+  active: boolean
+}
+
+export interface Ledger {
+  counterparties: Counterparty[]
+  events: LedgerEvent[]
+  subscriptions: Subscription[]
 }
 
 export interface AvatarInfo {
@@ -137,6 +273,9 @@ export interface UserData {
     checking: { balance: number; currency: CurrencyCode; categories: CheckingCategory[] }
     savings: SavingsEntry[]
   }
+  /** Display preferences. `mainCurrency` is what totals and converted values are shown in. */
+  settings: { mainCurrency: CurrencyCode }
+  ledger: Ledger
   skills: Skill[]
   kanban: {
     months: Record<string, KanbanMonth>

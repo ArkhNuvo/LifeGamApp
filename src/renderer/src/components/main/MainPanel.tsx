@@ -3,9 +3,11 @@ import Board from '../kanban/Board'
 import StatsGrid from '../stats/StatsGrid'
 import ThemeSwitcher from '../common/ThemeSwitcher'
 import LanguageSwitcher from '../common/LanguageSwitcher'
+import SettingsButton from '../common/SettingsButton'
 import UpdateChecker from '../common/UpdateChecker'
 import TelegramLinkModal from '../common/TelegramLinkModal'
 import { useAppStore } from '../../state/useAppStore'
+import { useModuleStore } from '../../state/useModuleStore'
 import { syncWithTelegram } from '../../lib/telegramSync'
 import { useT } from '../../lib/i18n/useT'
 import './MainPanel.css'
@@ -18,6 +20,7 @@ export default function MainPanel(): JSX.Element {
   const username = useAppStore((s) => s.username)
   const logout = useAppStore((s) => s.logout)
   const apiToken = useAppStore((s) => s.data?.telegram.apiToken ?? null)
+  const setModule = useModuleStore((s) => s.setModule)
   const [telegramOpen, setTelegramOpen] = useState(false)
   const [syncing, setSyncing] = useState(false)
 
@@ -46,6 +49,9 @@ export default function MainPanel(): JSX.Element {
           >
             {t('main.tabStats')}
           </button>
+          <button type="button" className="main-tab" onClick={() => setModule('finance')}>
+            {t('fin.title')}
+          </button>
         </div>
         <div className="main-panel-user">
           {apiToken && (
@@ -70,6 +76,7 @@ export default function MainPanel(): JSX.Element {
           <UpdateChecker />
           <ThemeSwitcher />
           <LanguageSwitcher />
+          <SettingsButton />
           <span>{username}</span>
           <button type="button" className="btn" onClick={logout}>
             {t('main.logout')}

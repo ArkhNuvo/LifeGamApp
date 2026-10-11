@@ -1,4 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { readFileSync, statSync } from 'fs'
+import { basename, extname } from 'path'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import {
@@ -11,12 +13,26 @@ import {
   loadUserData,
   saveUserData,
   saveAvatarDataUrl,
-  readFileAsDataUrl
+  readFileAsDataUrl,
+  saveAttachment,
+  readAttachmentAsDataUrl,
+  removeAttachment
 } from './storage'
+import { extractDocument, getAiStatus, setAiConfig } from './ai'
 import * as telegram from './telegram'
 import * as exchangeRates from './exchangeRates'
 import { initUpdater, checkForUpdates, quitAndInstall } from './updater'
-import type { TelegramCatalogPayload, UserData } from '../shared/types'
+import type { AiExtractRequest, PickedFile, TelegramCatalogPayload, UserData } from '../shared/types'
+
+const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024
+const MIME_BY_EXTENSION: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.pdf': 'application/pdf'
+}
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -92,6 +108,32 @@ function registerIpcHandlers(): void {
     saveAvatarDataUrl(username, dataUrl)
   )
   ipcMain.handle('files:readAsDataUrl', (_e, path: string) => readFileAsDataUrl(path))
+
+  ipcMain.handle('attachments:pick', async (): Promise<PickedFile | { error: 'too_big' } | null> => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [{ name: 'Documents', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf'] }]
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    const path = result.filePaths[0]
+    if (statSync(path).size > MAX_DOCUMENT_BYTES) return { error: 'too_big' }
+    const mime = MIME_BY_EXTENSION[extname(path).toLowerCase()]
+    if (!mime) return null
+    const buffer = readFileSync(path)
+    return { name: basename(path), mime, size: buffer.length, dataBase64: buffer.toString('base64') }
+  })
+  ipcMain.handle('attachments:save', (_e, username: string, mime: string, dataBase64: string) =>
+    saveAttachment(username, mime, dataBase64)
+  )
+  ipcMain.handle('attachments:read', (_e, path: string) => readAttachmentAsDataUrl(path))
+  ipcMain.handle('attachments:remove', (_e, path: string) => {
+    removeAttachment(path)
+    return true
+  })
+
+  ipcMain.handle('ai:status', () => getAiStatus())
+  ipcMain.handle('ai:setConfig', (_e, update: { apiKey?: string | null; model?: string }) => setAiConfig(update))
+  ipcMain.handle('ai:extract', (_e, req: AiExtractRequest) => extractDocument(req))
 
   ipcMain.handle('telegram:startPairing', (_e, username: string) => telegram.startPairing(username))
   ipcMain.handle('telegram:checkPairingStatus', (_e, code: string) => telegram.checkPairingStatus(code))

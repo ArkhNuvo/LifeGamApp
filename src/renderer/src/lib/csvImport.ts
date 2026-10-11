@@ -13,6 +13,11 @@ export interface ColumnMapping {
   category: number
   counterparty: number
   currency: number
+  /** Optional: "transfer" marks a move between own accounts (the rest is read from the amount's sign). */
+  type: number
+  /** Transfers: name of the destination account, and the amount credited there. */
+  toAccount: number
+  toAmount: number
 }
 
 export interface ImportOptions {
@@ -29,7 +34,10 @@ export interface ImportRow {
   line: number
   date: string | null
   amount: number | null
-  type: 'expense' | 'income' | null
+  type: 'expense' | 'income' | 'transfer' | null
+  /** Transfers only. */
+  toAccount: string
+  toAmount: number | null
   title: string
   category: string
   counterparty: string
@@ -49,7 +57,10 @@ export const EMPTY_MAPPING: ColumnMapping = {
   description: -1,
   category: -1,
   counterparty: -1,
-  currency: -1
+  currency: -1,
+  type: -1,
+  toAccount: -1,
+  toAmount: -1
 }
 
 /** Splits CSV text into rows of cells, honouring quotes ("a;b", "" for a literal quote) and CRLF. */
@@ -209,7 +220,10 @@ const HEADER_HINTS: Record<keyof ColumnMapping, RegExp> = {
   description: /(opis|tytu|title|description|назначени|описани|details|szczeg|memo|narrative|leírás|megjegyz|verwendung|reference)/i,
   category: /(kategor|category|категори|kategória)/i,
   counterparty: /(kontrahent|odbiorc|nadawc|payee|merchant|получател|контрагент|nazwa|partner|empfänger|name)/i,
-  currency: /(waluta|currency|валют|pénznem|währung)/i
+  currency: /(waluta|currency|валют|pénznem|währung)/i,
+  type: /^(тип|typ|type)/i,
+  toAccount: /(счёт назнач|счет назнач|destination account|konto docelowe)/i,
+  toAmount: /(сумма назнач|destination amount|kwota docelowa)/i
 }
 
 /** Guesses which column is which, from the header names (or, without headers, from the content). */
@@ -218,7 +232,7 @@ export function autoDetectMapping(header: string[] | null, sample: string[][]): 
   const taken = new Set<number>()
   if (header) {
     // Order matters: the more specific fields claim their column first.
-    for (const field of ['debit', 'credit', 'date', 'amount', 'category', 'currency', 'description', 'counterparty'] as const) {
+    for (const field of ['debit', 'credit', 'date', 'toAmount', 'toAccount', 'type', 'amount', 'category', 'currency', 'description', 'counterparty'] as const) {
       const idx = header.findIndex((h, i) => !taken.has(i) && HEADER_HINTS[field].test(h.trim()))
       if (idx !== -1) {
         mapping[field] = idx
@@ -285,7 +299,7 @@ export function buildRows(
   return rows.map((row, i): ImportRow => {
     const date = parseDate(cell(row, mapping.date), dateFormat)
     let amount: number | null = null
-    let type: 'expense' | 'income' | null = null
+    let type: 'expense' | 'income' | 'transfer' | null = null
     if (options.amountMode === 'signed') {
       const value = parseAmount(cell(row, mapping.amount))
       if (value !== null && value !== 0) {
@@ -302,12 +316,16 @@ export function buildRows(
       }
     }
     if (type && options.invert) type = type === 'expense' ? 'income' : 'expense'
+    const toAccount = cell(row, mapping.toAccount)
+    if (type && toAccount && /^(transfer|перевод|przelew)/i.test(cell(row, mapping.type))) type = 'transfer'
     const counterparty = cell(row, mapping.counterparty)
     return {
       line: firstLine + i,
       date,
       amount,
       type,
+      toAccount,
+      toAmount: type === 'transfer' ? Math.abs(parseAmount(cell(row, mapping.toAmount)) ?? 0) || null : null,
       title: tidyTitle(cell(row, mapping.description) || counterparty),
       category: cell(row, mapping.category),
       counterparty,

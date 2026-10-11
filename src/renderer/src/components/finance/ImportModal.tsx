@@ -18,7 +18,19 @@ import { formatMoney, useAccounts } from './useFinance'
 type Encoding = 'auto' | 'utf-8' | 'windows-1250' | 'windows-1251'
 type Status = 'new' | 'duplicate' | 'currency' | 'bad'
 
-const FIELDS = ['date', 'amount', 'debit', 'credit', 'description', 'category', 'counterparty', 'currency'] as const
+const FIELDS = [
+  'date',
+  'amount',
+  'debit',
+  'credit',
+  'description',
+  'category',
+  'counterparty',
+  'currency',
+  'type',
+  'toAccount',
+  'toAmount'
+] as const
 
 const FIELD_KEYS = {
   date: 'fin.importColDate',
@@ -28,7 +40,10 @@ const FIELD_KEYS = {
   description: 'fin.importColDescription',
   category: 'fin.importColCategory',
   counterparty: 'fin.importColCounterparty',
-  currency: 'fin.importColCurrency'
+  currency: 'fin.importColCurrency',
+  type: 'fin.importColType',
+  toAccount: 'fin.importColToAccount',
+  toAmount: 'fin.importColToAmount'
 } as const
 
 const PREVIEW_LIMIT = 300
@@ -38,7 +53,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }): JSX.E
   const t = useT()
   const updateData = useAppStore((s) => s.updateData)
   const events = useAppStore((s) => s.data?.ledger.events ?? [])
-  const accounts = useAccounts().filter((a) => a.group === 'checking')
+  const accounts = useAccounts()
 
   const [fileName, setFileName] = useState('')
   const [bytes, setBytes] = useState<Uint8Array | null>(null)
@@ -95,13 +110,17 @@ export default function ImportModal({ onClose }: { onClose: () => void }): JSX.E
   const statuses = useMemo(() => {
     const existing = new Map<string, number>()
     for (const ev of events) {
-      if (ev.accountId !== account?.id || ev.type === 'transfer') continue
+      if (ev.accountId !== account?.id) continue
       const key = `${ev.date}|${ev.type}|${ev.amount.toFixed(2)}`
       existing.set(key, (existing.get(key) ?? 0) + 1)
     }
     return rows.map((row): Status => {
       if (row.error || !row.date || row.amount === null || !row.type) return 'bad'
       if (row.currency && account && row.currency !== account.currency) return 'currency'
+      if (row.type === 'transfer') {
+        const dest = accounts.find((a) => a.name.toLowerCase() === row.toAccount.toLowerCase())
+        if (!dest || dest.id === account?.id) return 'bad'
+      }
       const key = `${row.date}|${row.type}|${row.amount.toFixed(2)}`
       const left = existing.get(key) ?? 0
       if (left > 0) {
@@ -110,7 +129,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }): JSX.E
       }
       return 'new'
     })
-  }, [rows, events, account])
+  }, [rows, events, account, accounts])
 
   // Rows ticked for import: new ones by default, anything else only when the user opts in.
   const [included, setIncluded] = useState<Set<number>>(new Set())
@@ -153,29 +172,39 @@ export default function ImportModal({ onClose }: { onClose: () => void }): JSX.E
   function runImport(): void {
     if (!account || selected.length === 0) return
     updateData((draft) => {
-      let net = 0
+      // Net effect per account, so back-filled history can leave the real balances alone.
+      const net = new Map<string, number>()
+      const bump = (id: string, delta: number): void => void net.set(id, (net.get(id) ?? 0) + delta)
       for (const i of selected) {
         const row = rows[i]
         if (!row.date || row.amount === null || !row.type) continue
+        const dest =
+          row.type === 'transfer'
+            ? accounts.find((a) => a.name.toLowerCase() === row.toAccount.toLowerCase())
+            : undefined
+        if (row.type === 'transfer' && !dest) continue
+        const toAmount = dest ? (row.toAmount ?? row.amount) : null
         addEvent(draft, {
           type: row.type,
           title: row.title,
           amount: row.amount,
           accountId: account.id,
-          toAccountId: null,
-          toAmount: null,
+          toAccountId: dest?.id ?? null,
+          toAmount,
           date: row.date,
           category: row.category,
           counterpartyId: null,
           subscriptionId: null,
           confirmed: true,
           attachments: [],
-          review: row.suspectTransfer ? 'transfer' : null
+          review: row.suspectTransfer && row.type !== 'transfer' ? 'transfer' : null
         })
-        net += row.type === 'income' ? row.amount : -row.amount
+        if (row.type === 'income') bump(account.id, row.amount)
+        else bump(account.id, -row.amount)
+        if (dest && toAmount) bump(dest.id, toAmount)
       }
       // Back-filled history shouldn't move today's balance unless asked to.
-      if (!adjustBalance) adjustAccountBalance(draft, account.id, -net)
+      if (!adjustBalance) for (const [id, delta] of net) adjustAccountBalance(draft, id, -delta)
     })
     onClose()
   }
@@ -368,17 +397,18 @@ export default function ImportModal({ onClose }: { onClose: () => void }): JSX.E
                         </td>
                         <td>{row.date ?? '—'}</td>
                         <td>
-                          {row.suspectTransfer && (
+                          {row.suspectTransfer && row.type !== 'transfer' && (
                             <span className="fin-review-badge" title={t('fin.reviewTransfer')}>
                               ⚠
                             </span>
                           )}
+                          {row.type === 'transfer' && `→ ${row.toAccount}: `}
                           {row.title}
                         </td>
                         <td>{row.category}</td>
                         <td className={row.type === 'income' ? 'num income' : 'num'}>
                           {row.amount !== null && account
-                            ? `${row.type === 'income' ? '+' : '−'}${formatMoney(row.amount, account.currency)}`
+                            ? `${row.type === 'income' ? '+' : row.type === 'transfer' ? '⇄' : '−'}${formatMoney(row.amount, account.currency)}`
                             : '—'}
                         </td>
                         <td>{t(`fin.importStatus_${status}` as 'fin.importStatus_new')}</td>

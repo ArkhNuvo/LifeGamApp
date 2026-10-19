@@ -35,25 +35,28 @@ export default function AccountModal({ accountId, onClose }: Props): JSX.Element
   const isGeneral = accountId === GENERAL_ACCOUNT_ID
 
   const [name, setName] = useState(existing?.name ?? '')
-  const [kind, setKind] = useState<AccountKind>(existing?.group ?? 'checking')
+  const [kind, setKind] = useState<AccountKind>(existing ? (existing.crypto ? 'crypto' : existing.group) : 'checking')
   const [currency, setCurrency] = useState<CurrencyCode>(existing?.currency ?? generalCurrency)
   const [balance, setBalance] = useState(existing ? String(existing.balance) : '')
   const [balanceTouched, setBalanceTouched] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [makeCrypto, setMakeCrypto] = useState(false)
+  const isCrypto = kind === 'crypto' || makeCrypto
 
   const balanceValue = balance.trim() === '' ? 0 : parseFloat(balance.replace(',', '.'))
-  const currencyChanged = !!existing && currency !== existing.currency
-  const rateMissing = currencyChanged && !canSwitchCurrency(existing.currency, currency, rates)
+  const effectiveCurrency: CurrencyCode = isCrypto ? 'USD' : currency
+  const currencyChanged = !!existing && effectiveCurrency !== existing.currency
+  const rateMissing = currencyChanged && !canSwitchCurrency(existing.currency, effectiveCurrency, rates)
   const valid = (isGeneral || name.trim().length > 0) && !Number.isNaN(balanceValue) && !rateMissing
 
   function save(): void {
     if (!valid) return
     updateData((draft) => {
       if (!existing || !accountId) {
-        addAccount(draft, { name: name.trim(), kind, currency, balance: balanceValue })
+        addAccount(draft, { name: name.trim(), kind, currency: effectiveCurrency, balance: balanceValue })
         return
       }
-      if (currencyChanged) changeAccountCurrency(draft, accountId, currency, rates, !balanceTouched)
+      if (currencyChanged) changeAccountCurrency(draft, accountId, effectiveCurrency, rates, !balanceTouched)
       if (isGeneral) {
         if (balanceTouched) draft.finance.checking.balance = balanceValue
       } else if (existing.group === 'checking') {
@@ -66,7 +69,8 @@ export default function AccountModal({ accountId, onClose }: Props): JSX.Element
         const entry = draft.finance.savings.find((e) => e.id === accountId)
         if (entry) {
           entry.name = name.trim()
-          if (balanceTouched) entry.amount = balanceValue
+          if (balanceTouched && !entry.holdings) entry.amount = balanceValue
+          if (makeCrypto && !entry.holdings) entry.holdings = []
         }
       }
     })
@@ -98,8 +102,8 @@ export default function AccountModal({ accountId, onClose }: Props): JSX.Element
 
         <div className="form-field">
           <label>{t('fin.accountKind')}</label>
-          <div className="fin-type-switch fin-type-switch--2">
-            {(['checking', 'savings'] as const).map((k) => (
+          <div className="fin-type-switch fin-type-switch--3">
+            {(['checking', 'savings', 'crypto'] as const).map((k) => (
               <button
                 key={k}
                 type="button"
@@ -107,18 +111,28 @@ export default function AccountModal({ accountId, onClose }: Props): JSX.Element
                 className={`fin-type-btn fin-type-btn--transfer${kind === k ? ' active' : ''}`}
                 onClick={() => setKind(k)}
               >
-                {t(k === 'checking' ? 'fin.kindChecking' : 'fin.kindSavings')}
+                {t(k === 'checking' ? 'fin.kindChecking' : k === 'savings' ? 'fin.kindSavings' : 'fin.kindCrypto')}
               </button>
             ))}
           </div>
         </div>
 
+        {existing && existing.group === 'savings' && !existing.crypto && (
+          <label className="fin-keep-balances">
+            <input type="checkbox" checked={makeCrypto} onChange={(e) => setMakeCrypto(e.target.checked)} />
+            {t('fin.makeCrypto')}
+          </label>
+        )}
+
+        {!isCrypto && (
         <div className="form-field">
           <label>{t('fin.accountCurrency')}</label>
           <CurrencyCombobox value={currency} onChange={setCurrency} />
           {rateMissing && <div className="field-hint fin-negative">{t('fin.rateUnavailable')}</div>}
         </div>
+        )}
 
+        {!isCrypto && (
         <div className="form-field">
           <label>{existing ? t('fin.balance') : t('fin.startBalance')}</label>
           <input
@@ -132,6 +146,8 @@ export default function AccountModal({ accountId, onClose }: Props): JSX.Element
             }}
           />
         </div>
+        )}
+        {isCrypto && <div className="fin-hint">{t('fin.cryptoAccountHint')}</div>}
 
         <div className="modal-actions">
           {existing && !isGeneral && (

@@ -3,6 +3,8 @@ import { useRatesStore } from '../../state/useRatesStore'
 import { useT } from '../../lib/i18n/useT'
 import { canConvert, convert } from '../../lib/currency'
 import { monthlyCost, nextSubscriptionDate } from '../../lib/ledger'
+import { detectSubscriptions } from '../../lib/subscriptionDetect'
+import { todayISO } from '../../lib/date'
 import ExchangeRatesButton from '../common/ExchangeRatesButton'
 import { formatMain, formatMoney, useAccounts, useMainCurrency } from './useFinance'
 
@@ -11,6 +13,8 @@ interface Props {
   onEditAccount: (id: string) => void
   onNewSubscription: () => void
   onEditSubscription: (id: string) => void
+  onDetectSubscriptions: () => void
+  onOpenCrypto: (id: string) => void
 }
 
 /** Left column of the finance module: mode, totals, accounts, and recurring payments. */
@@ -18,7 +22,9 @@ export default function FinanceProfile({
   onAddAccount,
   onEditAccount,
   onNewSubscription,
-  onEditSubscription
+  onEditSubscription,
+  onDetectSubscriptions,
+  onOpenCrypto
 }: Props): JSX.Element {
   const t = useT()
   const subscriptions = useAppStore((s) => s.data?.ledger.subscriptions ?? [])
@@ -39,6 +45,8 @@ export default function FinanceProfile({
       .sort()[0]
     return (upcoming ?? fallback).slice(5).split('-').reverse().join('.')
   }
+  const ledger = useAppStore((s) => s.data?.ledger)
+  const found = ledger ? detectSubscriptions({ ledger }, todayISO()).length : 0
   const monthlySubs = subscriptions
     .filter((s) => s.active)
     .reduce((sum, s) => sum + monthlyCost(s, accounts, rates, main), 0)
@@ -79,8 +87,8 @@ export default function FinanceProfile({
           {accounts
             .filter((a) => a.group === group)
             .map((a) => (
-              <button key={a.id} type="button" className="fin-list-item" onClick={() => onEditAccount(a.id)}>
-                <span>{a.name}</span>
+              <button key={a.id} type="button" className="fin-list-item" onClick={() => (a.crypto ? onOpenCrypto(a.id) : onEditAccount(a.id))}>
+                <span>{a.crypto ? '🪙 ' : ''}{a.name}</span>
                 <span className={`fin-amount${a.balance < 0 ? ' fin-negative' : ''}`}>
                   {formatMoney(a.balance, a.currency)}
                   {a.currency !== main && canConvert(a.currency, main, rates) && (
@@ -112,6 +120,9 @@ export default function FinanceProfile({
         })}
         <button type="button" className="fin-add-btn" onClick={onNewSubscription}>
           {t('fin.addSubscription')}
+        </button>
+        <button type="button" className="fin-add-btn" onClick={onDetectSubscriptions}>
+          {found > 0 ? t('fin.subsDetectFound', { n: found }) : t('fin.subsDetect')}
         </button>
         <div className="fin-hint">{t('fin.subsPerMonth', { amount: formatMain(monthlySubs, main) })}</div>
       </div>

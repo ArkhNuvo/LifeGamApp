@@ -1,3 +1,4 @@
+import { formatCoinAmount } from '../../lib/crypto'
 import { useMemo, useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
 import { useRatesStore } from '../../state/useRatesStore'
@@ -60,6 +61,11 @@ export default function EventsTab({ month, onEdit }: Props): JSX.Element {
   function amountText(ev: LedgerEvent): string {
     const from = accounts.find((a) => a.id === ev.accountId)
     const currency = from?.currency ?? 'USD'
+    // A coin payment: the token amount first, its USD equivalent beside it.
+    if (ev.crypto) {
+      const sign = ev.type === 'income' ? '+' : '-'
+      return `${sign}${formatCoinAmount(ev.crypto.amount)} ${ev.crypto.ticker} (≈ ${formatMoney(ev.amount, currency)})`
+    }
     if (ev.type === 'income') return `+${formatMoney(ev.amount, currency)}`
     if (ev.type === 'expense') return `-${formatMoney(ev.amount, currency)}`
     const to = accounts.find((a) => a.id === ev.toAccountId)
@@ -136,8 +142,11 @@ export default function EventsTab({ month, onEdit }: Props): JSX.Element {
                 <div className="fin-event-main" onClick={() => onEdit(ev)}>
                   <div className="fin-event-title">
                     {ev.title || cp || t(TYPE_KEYS[ev.type])}
-                    {ev.review === 'transfer' && (
-                      <span className="fin-review-badge" title={t('fin.reviewTransfer')}>
+                    {ev.review && (
+                      <span
+                        className="fin-review-badge"
+                        title={t(ev.review === 'document' ? 'fin.reviewDocument' : 'fin.reviewTransfer')}
+                      >
                         ⚠
                       </span>
                     )}

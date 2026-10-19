@@ -19,6 +19,8 @@ export interface LedgerAccount {
   group: 'checking' | 'savings'
   currency: CurrencyCode
   balance: number
+  /** A coin portfolio: its balance is computed from live prices, so events can't touch it. */
+  crypto: boolean
 }
 
 /** Every account events can touch: the general checking balance, its categories, and savings entries. */
@@ -31,7 +33,8 @@ export function listAccounts(data: Pick<UserData, 'finance'>, generalName: strin
       kind: 'general',
       group: 'checking',
       currency: checking.currency,
-      balance: checking.balance
+      balance: checking.balance,
+      crypto: false
     },
     ...checking.categories.map(
       (c): LedgerAccount => ({
@@ -40,7 +43,8 @@ export function listAccounts(data: Pick<UserData, 'finance'>, generalName: strin
         kind: 'category',
         group: 'checking',
         currency: c.currency,
-        balance: c.balance
+        balance: c.balance,
+        crypto: false
       })
     ),
     ...savings.map(
@@ -50,7 +54,8 @@ export function listAccounts(data: Pick<UserData, 'finance'>, generalName: strin
         kind: 'savings',
         group: 'savings',
         currency: e.currency,
-        balance: e.amount
+        balance: e.amount,
+        crypto: !!e.holdings
       })
     )
   ]
@@ -98,12 +103,36 @@ function eventDeltas(ev: LedgerEvent): { accountId: string; delta: number }[] {
   return out
 }
 
+/** A coin payment changes the portfolio's holdings (and its cached USD value right away, until live prices refresh it). */
+function applyCryptoDelta(draft: UserData, ev: LedgerEvent, sign: 1 | -1): void {
+  const entry = draft.finance.savings.find((e) => e.id === ev.accountId)
+  if (!entry?.holdings || !ev.crypto) return
+  const direction = ev.type === 'income' ? 1 : -1
+  let holding = entry.holdings.find((h) => h.ticker === ev.crypto?.ticker)
+  if (!holding) {
+    holding = { ticker: ev.crypto.ticker, amount: 0 }
+    entry.holdings.push(holding)
+  }
+  holding.amount = Math.round((holding.amount + sign * direction * ev.crypto.amount) * 1e8) / 1e8
+  entry.amount = addCents(entry.amount, sign * direction * ev.amount)
+}
+
 function applyEventEffects(draft: UserData, ev: LedgerEvent): void {
+  if (ev.crypto && ev.type !== 'transfer') {
+    applyCryptoDelta(draft, ev, 1)
+    ev.effectsApplied = true
+    return
+  }
   for (const { accountId, delta } of eventDeltas(ev)) applyAccountDelta(draft, accountId, delta)
   ev.effectsApplied = true
 }
 
 function revertEventEffects(draft: UserData, ev: LedgerEvent): void {
+  if (ev.crypto && ev.type !== 'transfer') {
+    applyCryptoDelta(draft, ev, -1)
+    ev.effectsApplied = false
+    return
+  }
   for (const { accountId, delta } of eventDeltas(ev)) applyAccountDelta(draft, accountId, -delta)
   ev.effectsApplied = false
 }

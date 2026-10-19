@@ -14,9 +14,12 @@ import CounterpartiesModal from './CounterpartiesModal'
 import EventModal from './EventModal'
 import EventsTab from './EventsTab'
 import FinanceProfile from './FinanceProfile'
+import CryptoModal from './CryptoModal'
+import { useCryptoSync } from './useCryptoSync'
+import DetectSubscriptionsModal from './DetectSubscriptionsModal'
 import ImportModal from './ImportModal'
 import MonthStepper from './MonthStepper'
-import StatsTab from './StatsTab'
+import StatsBoard from './StatsBoard'
 import SubscriptionModal from './SubscriptionModal'
 import './Finance.css'
 
@@ -47,6 +50,9 @@ export default function FinanceModule(): JSX.Element {
   const [counterpartiesOpen, setCounterpartiesOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [detectOpen, setDetectOpen] = useState(false)
+  const [cryptoId, setCryptoId] = useState<string | null>(null)
+  useCryptoSync()
 
   useEffect(() => {
     fetchRates()
@@ -68,6 +74,8 @@ export default function FinanceModule(): JSX.Element {
             onEditAccount={(accountId) => setAccountModal({ accountId })}
             onNewSubscription={() => setSubscriptionId('new')}
             onEditSubscription={setSubscriptionId}
+            onDetectSubscriptions={() => setDetectOpen(true)}
+            onOpenCrypto={setCryptoId}
           />
         </div>
       </div>
@@ -112,7 +120,7 @@ export default function FinanceModule(): JSX.Element {
           </div>
           <div className="main-panel-body fin-body">
             {tab === 'events' && <EventsTab month={month} onEdit={(initial) => setEventModal({ initial })} />}
-            {tab === 'stats' && <StatsTab month={month} />}
+            {tab === 'stats' && <StatsBoard month={month} />}
             {tab === 'calendar' && (
               <CalendarTab
                 month={month}
@@ -129,6 +137,17 @@ export default function FinanceModule(): JSX.Element {
       {accountModal && <AccountModal {...accountModal} onClose={() => setAccountModal(null)} />}
       {counterpartiesOpen && <CounterpartiesModal onClose={() => setCounterpartiesOpen(false)} />}
       {aiOpen && <AiSettingsModal onClose={() => setAiOpen(false)} />}
+      {cryptoId && (
+        <CryptoModal
+          accountId={cryptoId}
+          onClose={() => setCryptoId(null)}
+          onSettings={() => {
+            setAccountModal({ accountId: cryptoId })
+            setCryptoId(null)
+          }}
+        />
+      )}
+      {detectOpen && <DetectSubscriptionsModal onClose={() => setDetectOpen(false)} />}
       {importOpen && <ImportModal onClose={() => setImportOpen(false)} />}
     </>
   )

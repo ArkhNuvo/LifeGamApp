@@ -3,7 +3,7 @@ import { canConvert, convert } from './currency'
 import { convertEventsForAccount, GENERAL_ACCOUNT_ID, retargetEventsToGeneral } from './ledger'
 import type { CurrencyCode, UserData } from './types'
 
-export type AccountKind = 'checking' | 'savings'
+export type AccountKind = 'checking' | 'savings' | 'crypto'
 
 type Rates = Record<string, number> | null
 
@@ -24,6 +24,9 @@ export function addAccount(draft: UserData, fields: NewAccount): string {
       balance: fields.balance,
       currency: fields.currency
     })
+  } else if (fields.kind === 'crypto') {
+    // A coin portfolio is valued in USD from live prices; the balance starts at zero.
+    draft.finance.savings.push({ id, name: fields.name, amount: 0, currency: 'USD', holdings: [] })
   } else {
     draft.finance.savings.push({ id, name: fields.name, amount: fields.balance, currency: fields.currency })
   }

@@ -94,11 +94,19 @@ const EXTRACTION_TOOL = {
         enum: ['none', 'week', 'month', 'year'],
         description: 'Only if the document clearly states recurring billing; otherwise none.'
       },
+      payment_method: {
+        type: ['string', 'null'],
+        enum: ['card', 'cash', 'transfer', 'crypto', null],
+        description: 'How it was paid, if the document says: card (debit/credit card, contactless, BLIK), cash, transfer (bank transfer), crypto. Otherwise null.'
+      },
+      card_last4: { type: ['string', 'null'], description: 'Last four digits of the payment card if printed (e.g. "1234" from "**** 1234"); otherwise null.' },
+      crypto_ticker: { type: ['string', 'null'], description: 'For a crypto payment, the coin ticker such as BTC or ETH; otherwise null.' },
+      crypto_amount: { type: ['number', 'null'], description: 'For a crypto payment, the amount in that coin (positive); otherwise null.' },
       document_type: { type: 'string', description: 'receipt, invoice, bank_confirmation, payslip, or other.' },
       confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
       notes: { type: ['string', 'null'], description: 'Anything uncertain or worth double-checking.' }
     },
-    required: ['event_type', 'amount', 'currency', 'date', 'merchant', 'description', 'category', 'recurrence', 'document_type', 'confidence', 'notes']
+    required: ['event_type', 'amount', 'currency', 'date', 'merchant', 'description', 'category', 'recurrence', 'payment_method', 'card_last4', 'crypto_ticker', 'crypto_amount', 'document_type', 'confidence', 'notes']
   }
 } as const
 
@@ -115,6 +123,7 @@ function buildSystemPrompt(req: AiExtractRequest): string {
     `Always answer by calling the ${EXTRACTION_TOOL.name} tool; do not reply with prose.`,
     'Never invent values: if something is not on the document, use null. Do not guess a date.',
     'Amounts are the final total actually paid or received, not a subtotal or tax line.',
+    'For a crypto payment, report the coin amount in crypto_amount and the coin in crypto_ticker; amount is then the fiat value if the document shows one, else null.',
     `Today is ${req.today}; answer free-text fields (description, category, notes) in the language "${req.language}".`
   ]
   if (req.categories.length > 0) {
@@ -134,8 +143,20 @@ function toExtraction(input: Record<string, unknown>): AiExtraction {
   const recurrence =
     input.recurrence === 'week' || input.recurrence === 'month' || input.recurrence === 'year' ? input.recurrence : 'none'
   const confidence = input.confidence === 'high' || input.confidence === 'low' ? input.confidence : 'medium'
+  const method = ['card', 'cash', 'transfer', 'crypto'].includes(input.payment_method as string)
+    ? (input.payment_method as AiExtraction['paymentMethod'])
+    : null
+  const last4 = str(input.card_last4)?.replace(/\D/g, '').slice(-4) ?? null
+  const cryptoAmount =
+    typeof input.crypto_amount === 'number' && Number.isFinite(input.crypto_amount) && input.crypto_amount > 0
+      ? input.crypto_amount
+      : null
   return {
     eventType,
+    paymentMethod: method,
+    cardLast4: last4 && last4.length === 4 ? last4 : null,
+    cryptoTicker: str(input.crypto_ticker)?.toUpperCase().replace(/[^A-Z0-9]/g, '') ?? null,
+    cryptoAmount,
     amount,
     currency: str(input.currency)?.toUpperCase() ?? null,
     date: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,

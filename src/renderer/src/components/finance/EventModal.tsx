@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
 import { useRatesStore } from '../../state/useRatesStore'
+import { useCryptoStore } from '../../state/useCryptoStore'
 import { useLanguageStore } from '../../state/useLanguageStore'
 import { useT } from '../../lib/i18n/useT'
 import { todayISO } from '../../lib/date'
@@ -16,6 +17,8 @@ import {
   GENERAL_ACCOUNT_ID
 } from '../../lib/ledger'
 import { fromDataUrl, prepareForAi, toDataUrl } from '../../lib/documents'
+import { normalizeTicker } from '../../lib/crypto'
+import { pickPaymentAccount, type PaymentReason } from '../../lib/paymentAccount'
 import type {
   AiExtraction,
   Attachment,
@@ -84,7 +87,22 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
   )
   const [toAmount, setToAmount] = useState(initial?.toAmount != null ? String(initial.toAmount) : '')
   const [toAmountTouched, setToAmountTouched] = useState(initial?.toAmount != null)
+  /** "Operation on a savings account": swaps the account list from checking to savings. */
+  const [savingsMode, setSavingsMode] = useState(
+    () => accounts.find((a) => a.id === (initial?.accountId ?? ''))?.group === 'savings'
+  )
   const [swappedIncome, setSwappedIncome] = useState(false)
+  // Payments in a coin: the coin and its amount; `amount` is then the USD equivalent.
+  const [cryptoTicker, setCryptoTicker] = useState(initial?.crypto?.ticker ?? '')
+  const [cryptoQty, setCryptoQty] = useState(initial?.crypto ? String(initial.crypto.amount) : '')
+  const [amountTouched, setAmountTouched] = useState(!!initial)
+  /** A card number seen on the document that isn't tied to an account yet. */
+  const [newCard, setNewCard] = useState<string | null>(null)
+  const [rememberCard, setRememberCard] = useState(true)
+  const settings = useAppStore((s) => s.data?.settings)
+  const savings = useAppStore((s) => s.data?.finance.savings)
+  const prices = useCryptoStore((s) => s.prices)
+  const fetchPrices = useCryptoStore((s) => s.fetch)
   /** Events flagged by the CSV import are already reflected in the real balances, so editing them leaves balances alone by default. */
   const [keepBalances, setKeepBalances] = useState(initial?.review === 'transfer')
   /** What the user is typing into the rate field right now; null = show the rate derived from the two amounts. */
@@ -92,8 +110,12 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
   const [date, setDate] = useState(initial?.date ?? defaultDate ?? today)
   const [category, setCategory] = useState(initial?.category ?? '')
   const [counterpartyId, setCounterpartyId] = useState<string>(initial?.counterpartyId ?? '')
-  const [confirmed, setConfirmed] = useState(initial?.confirmed ?? (defaultDate ?? today) <= today)
-  const [confirmedTouched, setConfirmedTouched] = useState(!!initial)
+  // A placeholder from the bot (amount not known yet) becomes a paid event once the user fills it in.
+  const placeholder = initial?.review === 'document'
+  const [confirmed, setConfirmed] = useState(
+    placeholder ? initial.date <= today : (initial?.confirmed ?? (defaultDate ?? today) <= today)
+  )
+  const [confirmedTouched, setConfirmedTouched] = useState(!!initial && !placeholder)
   const [recurrence, setRecurrence] = useState<Recurrence | ''>('')
   const [newCpName, setNewCpName] = useState<string | null>(null)
   const [newCpKind, setNewCpKind] = useState<CounterpartyKind>('service')
@@ -116,11 +138,39 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
 
   const draftUrl = useMemo(() => (draftFile ? toDataUrl(draftFile.mime, draftFile.dataBase64) : null), [draftFile])
 
-  // Payments (expenses, income, subscriptions) can't go through a savings account;
-  // only transfers may move money in and out of savings.
+  // Payments are made from checking accounts unless the "savings operation" box is ticked, which
+  // lists the savings accounts (and crypto portfolios) instead; transfers may use any account but a portfolio.
   const sourceAccounts =
-    type === 'transfer' ? accounts : accounts.filter((a) => a.group === 'checking' || a.id === initial?.accountId)
+    type === 'transfer'
+      ? accounts.filter((a) => !a.crypto || a.id === initial?.accountId)
+      : accounts.filter((a) => (savingsMode ? a.group === 'savings' : a.group === 'checking'))
   const account = accounts.find((a) => a.id === accountId)
+  const hasSavings = accounts.some((a) => a.group === 'savings')
+
+  // An account chosen elsewhere (the document reader, a type switch) that is a savings one turns the box on.
+  useEffect(() => {
+    if (type !== 'transfer' && account?.group === 'savings' && !savingsMode) setSavingsMode(true)
+  }, [type, account?.group, savingsMode])
+
+  function toggleSavingsMode(on: boolean): void {
+    setSavingsMode(on)
+    const list = accounts.filter((a) => (on ? a.group === 'savings' : a.group === 'checking'))
+    if (!list.some((a) => a.id === accountId)) setAccountId(list[0]?.id ?? GENERAL_ACCOUNT_ID)
+  }
+  const tickerSym = normalizeTicker(cryptoTicker)
+  const cryptoQtyValue = parseFloat(cryptoQty.replace(',', '.'))
+  const isCrypto = !!account?.crypto && type !== 'transfer'
+  const heldTickers = (savings?.find((e) => e.id === accountId)?.holdings ?? []).map((h) => h.ticker)
+
+  // The USD equivalent follows the coin amount at the live price until the user types their own figure.
+  useEffect(() => {
+    if (isCrypto && tickerSym) void fetchPrices([tickerSym])
+  }, [isCrypto, tickerSym, fetchPrices])
+  useEffect(() => {
+    if (!isCrypto || amountTouched) return
+    const price = prices[tickerSym]
+    if (price && cryptoQtyValue > 0) setAmount(String(Math.round(cryptoQtyValue * price * 100) / 100))
+  }, [isCrypto, amountTouched, prices, tickerSym, cryptoQtyValue])
   const toAccount = accounts.find((a) => a.id === toAccountId)
   /** Category hints are per event type: what you already used for it (most used first), then a starter list. */
   function suggestionsFor(kind: LedgerEventType): string[] {
@@ -150,6 +200,7 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
 
   function changeAmount(value: string): void {
     setAmount(value)
+    setAmountTouched(true)
     if (type === 'transfer' && !toAmountTouched) setToAmount(suggestedToAmount(value, accountId, toAccountId))
   }
 
@@ -218,10 +269,35 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
     const notes: string[] = []
     setType(d.eventType)
     if (d.amount !== null) setAmount(String(d.amount))
-    if (d.currency) {
-      const match = accounts.find((a) => a.group === 'checking' && a.currency === d.currency)
-      if (match) setAccountId(match.id)
-      else notes.push(t('fin.docCurrencyMismatch', { currency: d.currency }))
+    if (d.cryptoTicker && d.cryptoAmount) {
+      setCryptoTicker(d.cryptoTicker)
+      setCryptoQty(String(d.cryptoAmount))
+      if (d.amount === null) setAmountTouched(false)
+    }
+    // Where it was paid from follows how it was paid: a known card, the default card / cash account, a coin portfolio.
+    if (settings) {
+      const { account: picked, reason } = pickPaymentAccount(
+        settings,
+        accounts,
+        d,
+        (id) => savings?.find((e) => e.id === id)?.holdings?.map((h) => h.ticker) ?? []
+      )
+      if (picked) {
+        setAccountId(picked.id)
+        const why: Record<PaymentReason, string | null> = {
+          crypto: 'fin.payBy_crypto',
+          'card-binding': 'fin.payBy_cardBinding',
+          'default-card': 'fin.payBy_defaultCard',
+          'default-cash': 'fin.payBy_defaultCash',
+          currency: null,
+          general: null
+        }
+        if (why[reason]) notes.push(t(why[reason] as 'fin.payBy_crypto', { account: picked.name, card: d.cardLast4 ?? '' }))
+        if (d.currency && picked.currency !== d.currency && !picked.crypto) {
+          notes.push(t('fin.docCurrencyMismatch', { currency: d.currency }))
+        }
+      }
+      if (d.cardLast4 && !settings.cardAccounts?.[d.cardLast4]) setNewCard(d.cardLast4)
     }
     if (d.date) changeDate(d.date)
     const label = d.description ?? d.merchant
@@ -291,6 +367,7 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
     !Number.isNaN(amountValue) &&
     amountValue > 0 &&
     !!account &&
+    (!isCrypto || (tickerSym.length > 0 && cryptoQtyValue > 0)) &&
     (type !== 'transfer' || (!!toAccount && toAccountId !== accountId && !Number.isNaN(toAmountValue) && toAmountValue > 0))
 
   const crossCurrency = type === 'transfer' && !!account && !!toAccount && account.currency !== toAccount.currency
@@ -334,9 +411,13 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
       counterpartyId: counterpartyId || newCpId || null,
       confirmed,
       attachments,
-      review: null
+      review: null,
+      crypto: isCrypto ? { ticker: tickerSym, amount: cryptoQtyValue } : null
     }
     updateData((draft) => {
+      if (newCard && rememberCard) {
+        draft.settings.cardAccounts = { ...(draft.settings.cardAccounts ?? {}), [newCard]: accountId }
+      }
       if (newCpId) {
         draft.ledger.counterparties.push({
           id: newCpId,
@@ -396,9 +477,6 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
                 // A category typed for one kind of event doesn't make sense for another ("Salary" as an expense).
                 if (category && !suggestionsFor(tp.value).some((c) => c.toLowerCase() === category.trim().toLowerCase())) {
                   setCategory('')
-                }
-                if (tp.value !== 'transfer' && account?.group === 'savings' && accountId !== initial?.accountId) {
-                  setAccountId(accounts.find((a) => a.group === 'checking')?.id ?? GENERAL_ACCOUNT_ID)
                 }
                 if (tp.value === 'transfer' && type === 'income') {
                   // An incoming payment becomes a transfer *into* its account: the source is another one,
@@ -578,6 +656,52 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
           </div>
         </div>
 
+        {type !== 'transfer' && (hasSavings || savingsMode) && (
+          <label className="fin-keep-balances">
+            <input type="checkbox" checked={savingsMode} onChange={(e) => toggleSavingsMode(e.target.checked)} />
+            {t('fin.savingsOperation')}
+          </label>
+        )}
+
+        {isCrypto && (
+          <>
+            <div className="fin-row">
+              <div className="form-field fin-grow">
+                <label>{t('fin.cryptoTicker')}</label>
+                <input
+                  list="fin-held-tickers"
+                  value={cryptoTicker}
+                  placeholder="BTC"
+                  onChange={(e) => setCryptoTicker(e.target.value)}
+                />
+                <datalist id="fin-held-tickers">
+                  {heldTickers.map((tk) => (
+                    <option key={tk} value={tk} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="form-field fin-grow">
+                <label>{t('fin.cryptoAmount')}</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={cryptoQty}
+                  onChange={(e) => setCryptoQty(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="fin-hint">{t('fin.cryptoUsdHint')}</div>
+          </>
+        )}
+
+        {newCard && (
+          <label className="fin-keep-balances">
+            <input type="checkbox" checked={rememberCard} onChange={(e) => setRememberCard(e.target.checked)} />
+            {t('fin.rememberCard', { card: newCard })}
+          </label>
+        )}
+
         {type === 'transfer' && (
           <div className="fin-row">
             <div className="form-field fin-grow">
@@ -585,7 +709,7 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
               <select value={toAccountId} onChange={(e) => changeAccounts(accountId, e.target.value)}>
                 <option value="">—</option>
                 {accounts
-                  .filter((a) => a.id !== accountId)
+                  .filter((a) => a.id !== accountId && !a.crypto)
                   .map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name} ({a.currency})

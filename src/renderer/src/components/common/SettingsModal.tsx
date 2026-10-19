@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
 import { useRatesStore } from '../../state/useRatesStore'
 import { useT } from '../../lib/i18n/useT'
 import CurrencyCombobox from '../finance/CurrencyCombobox'
+import { useAccounts } from '../finance/useFinance'
 
 /** App settings. Currently: the main currency that totals and converted values are shown in. */
 export default function SettingsModal({ onClose }: { onClose: () => void }): JSX.Element {
@@ -13,6 +14,35 @@ export default function SettingsModal({ onClose }: { onClose: () => void }): JSX
   const loading = useRatesStore((s) => s.loading)
   const fetchIfNeeded = useRatesStore((s) => s.fetchIfNeeded)
   const refresh = useRatesStore((s) => s.refresh)
+  const settings = useAppStore((s) => s.data?.settings)
+  const accounts = useAccounts().filter((a) => !a.crypto)
+  const [digits, setDigits] = useState('')
+  const [bindTo, setBindTo] = useState('')
+  const bindings = Object.entries(settings?.cardAccounts ?? {})
+  const accountLabel = (id: string): string => accounts.find((a) => a.id === id)?.name ?? '?'
+
+  function accountSelect(value: string | null | undefined, onChange: (id: string | null) => void): JSX.Element {
+    return (
+      <select value={value ?? ''} onChange={(e) => onChange(e.target.value || null)}>
+        <option value="">—</option>
+        {accounts.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.name} ({a.currency})
+          </option>
+        ))}
+      </select>
+    )
+  }
+
+  function addBinding(): void {
+    const last4 = digits.replace(/\D/g, '')
+    const target = bindTo || accounts[0]?.id
+    if (last4.length !== 4 || !target) return
+    updateData((draft) => {
+      draft.settings.cardAccounts = { ...(draft.settings.cardAccounts ?? {}), [last4]: target }
+    })
+    setDigits('')
+  }
 
   useEffect(() => {
     fetchIfNeeded()
@@ -34,6 +64,61 @@ export default function SettingsModal({ onClose }: { onClose: () => void }): JSX
             }
           />
           <div className="field-hint">{t('settings.mainCurrencyHint')}</div>
+        </div>
+
+        <div className="form-field">
+          <label>{t('settings.defaultCard')}</label>
+          {accountSelect(settings?.defaultCardAccountId, (id) =>
+            updateData((draft) => {
+              draft.settings.defaultCardAccountId = id
+            })
+          )}
+        </div>
+        <div className="form-field">
+          <label>{t('settings.defaultCash')}</label>
+          {accountSelect(settings?.defaultCashAccountId, (id) =>
+            updateData((draft) => {
+              draft.settings.defaultCashAccountId = id
+            })
+          )}
+          <div className="field-hint">{t('settings.paymentHint')}</div>
+        </div>
+        <div className="form-field">
+          <label>{t('settings.cardBindings')}</label>
+          {bindings.map(([last4, accountId]) => (
+            <div key={last4} className="fin-cp-row">
+              <span className="fin-cp-name">•••• {last4}</span>
+              <span className="fin-cp-meta">→ {accountLabel(accountId)}</span>
+              <button
+                type="button"
+                className="icon-btn"
+                title={t('common.delete')}
+                onClick={() =>
+                  updateData((draft) => {
+                    const next = { ...(draft.settings.cardAccounts ?? {}) }
+                    delete next[last4]
+                    draft.settings.cardAccounts = next
+                  })
+                }
+              >
+                🗑
+              </button>
+            </div>
+          ))}
+          <div className="reward-row">
+            <input
+              value={digits}
+              maxLength={4}
+              inputMode="numeric"
+              placeholder={t('settings.cardDigits')}
+              onChange={(e) => setDigits(e.target.value.replace(/\D/g, ''))}
+              style={{ width: 90 }}
+            />
+            <div className="fin-grow">{accountSelect(bindTo || accounts[0]?.id, (id) => setBindTo(id ?? ''))}</div>
+            <button type="button" className="btn" onClick={addBinding} disabled={digits.length !== 4}>
+              {t('common.add')}
+            </button>
+          </div>
         </div>
 
         <div className="form-field">

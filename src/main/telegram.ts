@@ -1,6 +1,6 @@
-import type { TelegramAction, TelegramCatalogPayload } from '../shared/types'
+import type { PickedFile, TelegramAction, TelegramCatalogPayload } from '../shared/types'
 
-const API_BASE = 'http://199.247.0.246:8080'
+const API_BASE = process.env.LIFEGAM_BOT_API_URL ?? 'http://199.247.0.246:8080'
 /** Without a timeout a hung server would stall background sync for minutes. */
 const REQUEST_TIMEOUT_MS = 15_000
 
@@ -61,4 +61,17 @@ export async function ackActions(apiToken: string, ids: number[]): Promise<void>
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   })
   if (!res.ok) throw new Error(`actions/ack failed: ${res.status}`)
+}
+
+/** Downloads a photo/scan the user sent to the bot. Returns null when the server no longer has it. */
+export async function fetchFile(apiToken: string, fileId: string, name: string | null): Promise<PickedFile | null> {
+  const res = await fetch(`${API_BASE}/files/${encodeURIComponent(fileId)}`, {
+    headers: { Authorization: `Bearer ${apiToken}` },
+    signal: AbortSignal.timeout(60_000)
+  })
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`files/${fileId} failed: ${res.status}`)
+  const bytes = Buffer.from(await res.arrayBuffer())
+  const mime = (res.headers.get('content-type') ?? 'application/octet-stream').split(';')[0]
+  return { name: name ?? fileId, mime, size: bytes.length, dataBase64: bytes.toString('base64') }
 }

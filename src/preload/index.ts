@@ -5,6 +5,7 @@ import type {
   AiStatus,
   AuthResult,
   PickedFile,
+  CryptoPrices,
   ExchangeRates,
   TelegramAction,
   TelegramCatalogPayload,
@@ -63,6 +64,8 @@ const api = {
       ipcRenderer.invoke('telegram:pushCatalog', apiToken, payload),
     fetchPendingActions: (apiToken: string): Promise<TelegramAction[]> =>
       ipcRenderer.invoke('telegram:fetchPendingActions', apiToken),
+    fetchFile: (apiToken: string, fileId: string, name: string | null): Promise<PickedFile | null> =>
+      ipcRenderer.invoke('telegram:fetchFile', apiToken, fileId, name),
     ackActions: (apiToken: string, ids: number[]): Promise<void> =>
       ipcRenderer.invoke('telegram:ackActions', apiToken, ids)
   },
@@ -74,6 +77,10 @@ const api = {
       ipcRenderer.on('updates:status', listener)
       return () => ipcRenderer.removeListener('updates:status', listener)
     }
+  },
+  crypto: {
+    prices: (tickers: string[], force?: boolean): Promise<CryptoPrices> =>
+      ipcRenderer.invoke('crypto:prices', tickers, force)
   },
   rates: {
     get: (): Promise<ExchangeRates> => ipcRenderer.invoke('rates:get'),

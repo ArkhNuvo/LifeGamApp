@@ -53,7 +53,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }): JSX.E
   const t = useT()
   const updateData = useAppStore((s) => s.updateData)
   const events = useAppStore((s) => s.data?.ledger.events ?? [])
-  const accounts = useAccounts()
+  const accounts = useAccounts().filter((a) => !a.crypto)
 
   const [fileName, setFileName] = useState('')
   const [bytes, setBytes] = useState<Uint8Array | null>(null)

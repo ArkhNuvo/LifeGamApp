@@ -4,6 +4,7 @@ import { useLanguageStore } from '../state/useLanguageStore'
 import { useRatesStore } from '../state/useRatesStore'
 import { getLevelProgress } from './xpCurve'
 import { convertToUsd } from './currency'
+import { listAccounts } from './ledger'
 import type {
   KanbanCard,
   KanbanColumn,
@@ -113,6 +114,9 @@ export function buildCatalogPayload(data: UserData): TelegramCatalogPayload {
     skills,
     columns,
     checkingCategories: checkingCategories.map((c) => ({ id: c.id, name: c.name, currency: c.currency })),
+    financeAccounts: listAccounts(data, language === 'ru' ? 'Основной' : 'Main')
+      .filter((a) => !a.crypto)
+      .map((a) => ({ id: a.id, name: a.name, currency: a.currency })),
     plannedCards,
     doneTodayCards,
     weekCards,

@@ -4,6 +4,7 @@ import type {
   TelegramCreateActionPayload,
   TelegramDeleteActionPayload,
   TelegramEditActionPayload,
+  TelegramFinanceAddPayload,
   TelegramSetEnergyActionPayload,
   TelegramToggleDoneActionPayload,
   KanbanCard,
@@ -18,6 +19,7 @@ import {
   editCardWithEffects
 } from './kanbanXp'
 import { useAppStore } from '../state/useAppStore'
+import { applyFinanceAdd } from './financeInbox'
 
 export function startPairing(username: string): Promise<string> {
   return window.api.telegram.startPairing(username)
@@ -136,10 +138,23 @@ export async function syncWithTelegram(apiToken: string): Promise<void> {
     let botActed = false
     try {
       const actions = await fetchPendingActions(apiToken)
-      if (actions.length > 0) {
+      const financeActions = actions.filter((a) => a.action_type === 'finance_add')
+      const taskActions = actions.filter((a) => a.action_type !== 'finance_add')
+      // Payments need the network (the attached document), so they go one by one and are only
+      // acknowledged once saved — a failure leaves the action queued for the next tick.
+      for (const action of financeActions) {
+        try {
+          await applyFinanceAdd(apiToken, action.payload as TelegramFinanceAddPayload)
+          await ackActions(apiToken, [action.id])
+          botActed = true
+        } catch {
+          // retried on the next sync
+        }
+      }
+      if (taskActions.length > 0) {
         botActed = true
         useAppStore.getState().updateData((draft) => {
-          for (const action of actions) {
+          for (const action of taskActions) {
             switch (action.action_type) {
               case 'create':
                 applyCreateAction(draft, action.payload as TelegramCreateActionPayload)
@@ -161,7 +176,7 @@ export async function syncWithTelegram(apiToken: string): Promise<void> {
         })
         await ackActions(
           apiToken,
-          actions.map((a) => a.id)
+          taskActions.map((a) => a.id)
         )
       }
     } catch {

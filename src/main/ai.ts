@@ -102,6 +102,28 @@ const EXTRACTION_TOOL = {
       card_last4: { type: ['string', 'null'], description: 'Last four digits of the payment card if printed (e.g. "1234" from "**** 1234"); otherwise null.' },
       crypto_ticker: { type: ['string', 'null'], description: 'For a crypto payment, the coin ticker such as BTC or ETH; otherwise null.' },
       crypto_amount: { type: ['number', 'null'], description: 'For a crypto payment, the amount in that coin (positive); otherwise null.' },
+      document_number: { type: ['string', 'null'], description: 'Invoice / receipt number as printed; otherwise null.' },
+      counterparty_name: { type: ['string', 'null'], description: 'The other party: the seller for a purchase, the buyer for a sale.' },
+      counterparty_nip: { type: ['string', 'null'], description: "The other party's tax id (NIP / VAT id), digits only; otherwise null." },
+      items: {
+        type: 'array',
+        description: 'Document lines (one per invoice position). Empty if the document has no itemised lines.',
+        items: {
+          type: 'object',
+          properties: {
+            description: { type: 'string' },
+            net: { type: ['number', 'null'] },
+            vat_rate: { type: ['number', 'null'], description: 'VAT rate in percent (23, 8, 5, 0); null if exempt (zw) or not subject (np).' },
+            gross: { type: ['number', 'null'] },
+            kpir_column: {
+              type: ['string', 'null'],
+              enum: ['7', '8', '10', '11', '12', '13', '16', '-', null],
+              description: 'Suggested column of the Polish KPiR book.'
+            }
+          },
+          required: ['description', 'net', 'vat_rate', 'gross', 'kpir_column']
+        }
+      },
       document_type: { type: 'string', description: 'receipt, invoice, bank_confirmation, payslip, or other.' },
       confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
       notes: { type: ['string', 'null'], description: 'Anything uncertain or worth double-checking.' }
@@ -126,6 +148,12 @@ function buildSystemPrompt(req: AiExtractRequest): string {
     'For a crypto payment, report the coin amount in crypto_amount and the coin in crypto_ticker; amount is then the fiat value if the document shows one, else null.',
     `Today is ${req.today}; answer free-text fields (description, category, notes) in the language "${req.language}".`
   ]
+  if (req.business) {
+    lines.push(
+      'This document belongs to a Polish sole proprietorship. Fill document_number, counterparty_name, counterparty_nip and list every invoice line in items with net, vat_rate and gross.',
+      'Suggest kpir_column per line: 7 = sales of goods/services, 8 = other revenue, 10 = goods for resale and materials, 11 = side costs of purchase (transport, insurance of goods), 12 = wages, 13 = other business expenses (fuel, phone, software, rent, services), 16 = R&D costs, "-" = not a KPiR entry (the owner’s own ZUS, PIT or VAT payments).'
+    )
+  }
   if (req.categories.length > 0) {
     lines.push(`The user already uses these categories; reuse one if it fits: ${req.categories.join(', ')}.`)
   }
@@ -151,8 +179,22 @@ function toExtraction(input: Record<string, unknown>): AiExtraction {
     typeof input.crypto_amount === 'number' && Number.isFinite(input.crypto_amount) && input.crypto_amount > 0
       ? input.crypto_amount
       : null
+  const numOrNull = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+  const items = Array.isArray(input.items)
+    ? (input.items as Record<string, unknown>[]).map((it) => ({
+        description: str(it.description) ?? '',
+        net: numOrNull(it.net),
+        vatRate: numOrNull(it.vat_rate),
+        gross: numOrNull(it.gross),
+        kpirColumn: str(it.kpir_column)
+      }))
+    : []
   return {
     eventType,
+    items,
+    documentNumber: str(input.document_number),
+    counterpartyName: str(input.counterparty_name),
+    counterpartyNip: str(input.counterparty_nip)?.replace(/\D/g, '') || null,
     paymentMethod: method,
     cardLast4: last4 && last4.length === 4 ? last4 : null,
     cryptoTicker: str(input.crypto_ticker)?.toUpperCase().replace(/[^A-Z0-9]/g, '') ?? null,

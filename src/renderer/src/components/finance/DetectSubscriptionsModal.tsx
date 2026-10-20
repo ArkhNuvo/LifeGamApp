@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useAppStore } from '../../state/useAppStore'
+import { useBookSelect, useUpdateBook } from '../../lib/book'
 import { useT } from '../../lib/i18n/useT'
 import { todayISO } from '../../lib/date'
 import { adoptCandidate, detectSubscriptions, dismissCandidate } from '../../lib/subscriptionDetect'
@@ -10,8 +10,8 @@ const EVERY_KEYS = { week: 'fin.repeatWeek', month: 'fin.repeatMonth', year: 'fi
 /** Recurring payments found in the history: pick the ones that really are subscriptions. */
 export default function DetectSubscriptionsModal({ onClose }: { onClose: () => void }): JSX.Element {
   const t = useT()
-  const updateData = useAppStore((s) => s.updateData)
-  const ledger = useAppStore((s) => s.data?.ledger)
+  const updateData = useUpdateBook()
+  const ledger = useBookSelect((b) => b?.ledger)
   const accounts = useAccounts()
   const today = todayISO()
   const candidates = useMemo(() => (ledger ? detectSubscriptions({ ledger }, today) : []), [ledger, today])

@@ -1,5 +1,5 @@
 import { addDays, createSubscription, materializeSubscriptions } from './ledger'
-import type { LedgerEvent, Recurrence, UserData } from './types'
+import type { FinanceBook, LedgerEvent, Recurrence } from './types'
 
 /** A recurring payment found in the history, not yet turned into a subscription. */
 export interface SubscriptionCandidate {
@@ -71,7 +71,7 @@ const PERIODS: { every: Recurrence; min: number; max: number }[] = [
  * (almost) the same amount.
  */
 export function detectSubscriptions(
-  data: Pick<UserData, 'ledger'>,
+  data: Pick<FinanceBook, 'ledger'>,
   todayIso: string
 ): SubscriptionCandidate[] {
   const known = new Set(data.ledger.subscriptions.map((s) => merchantKey(s.title).key))
@@ -134,7 +134,7 @@ export function detectSubscriptions(
 }
 
 /** Turns a candidate into a subscription: past payments are linked to it and the schedule continues from the last one. */
-export function adoptCandidate(draft: UserData, candidate: SubscriptionCandidate, todayIso: string): void {
+export function adoptCandidate(draft: FinanceBook, candidate: SubscriptionCandidate, todayIso: string): void {
   const sub = createSubscription(draft, {
     title: candidate.title,
     amount: candidate.amount,
@@ -151,7 +151,7 @@ export function adoptCandidate(draft: UserData, candidate: SubscriptionCandidate
   materializeSubscriptions(draft, todayIso)
 }
 
-export function dismissCandidate(draft: UserData, key: string): void {
+export function dismissCandidate(draft: FinanceBook, key: string): void {
   const list = draft.ledger.dismissedSubscriptions ?? []
   if (!list.includes(key)) draft.ledger.dismissedSubscriptions = [...list, key]
 }

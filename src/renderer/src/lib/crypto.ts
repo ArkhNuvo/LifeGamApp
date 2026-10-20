@@ -1,10 +1,10 @@
-import type { CryptoHolding, CryptoPrices, UserData } from './types'
+import type { CryptoHolding, CryptoPrices, FinanceBook } from './types'
 
 export function normalizeTicker(raw: string): string {
   return raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
 }
 
-export function allTickers(data: Pick<UserData, 'finance'>): string[] {
+export function allTickers(data: Pick<FinanceBook, 'finance'>): string[] {
   const set = new Set<string>()
   for (const entry of data.finance.savings) for (const h of entry.holdings ?? []) set.add(h.ticker)
   return [...set]
@@ -24,7 +24,7 @@ export function portfolioValue(holdings: CryptoHolding[], prices: CryptoPrices['
  * An account whose coins have no price at all (offline, unknown tickers) keeps
  * its last value instead of dropping to zero.
  */
-export function syncCryptoBalances(draft: UserData, prices: CryptoPrices['prices']): void {
+export function syncCryptoBalances(draft: FinanceBook, prices: CryptoPrices['prices']): void {
   for (const entry of draft.finance.savings) {
     if (!entry.holdings || entry.holdings.length === 0) continue
     if (!entry.holdings.some((h) => prices[h.ticker] != null)) continue

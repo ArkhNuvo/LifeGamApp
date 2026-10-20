@@ -6,7 +6,7 @@ import type {
   LedgerEvent,
   Recurrence,
   Subscription,
-  UserData
+  FinanceBook
 } from './types'
 
 /** Account id of the general (uncategorised) checking balance. */
@@ -24,7 +24,7 @@ export interface LedgerAccount {
 }
 
 /** Every account events can touch: the general checking balance, its categories, and savings entries. */
-export function listAccounts(data: Pick<UserData, 'finance'>, generalName: string): LedgerAccount[] {
+export function listAccounts(data: Pick<FinanceBook, 'finance'>, generalName: string): LedgerAccount[] {
   const { checking, savings } = data.finance
   return [
     {
@@ -66,7 +66,7 @@ function addCents(value: number, delta: number): number {
   return Math.round((value + delta) * 100) / 100
 }
 
-function applyAccountDelta(draft: UserData, accountId: string, delta: number): void {
+function applyAccountDelta(draft: FinanceBook, accountId: string, delta: number): void {
   if (accountId === GENERAL_ACCOUNT_ID) {
     draft.finance.checking.balance = addCents(draft.finance.checking.balance, delta)
     return
@@ -81,12 +81,12 @@ function applyAccountDelta(draft: UserData, accountId: string, delta: number): v
 }
 
 /** Shifts an account balance directly, outside any event (used to keep balances unchanged by back-filled history). */
-export function adjustAccountBalance(draft: UserData, accountId: string, delta: number): void {
+export function adjustAccountBalance(draft: FinanceBook, accountId: string, delta: number): void {
   applyAccountDelta(draft, accountId, delta)
 }
 
 /** Current balance of an account (0 for an unknown id). */
-export function accountBalance(draft: UserData, accountId: string): number {
+export function accountBalance(draft: FinanceBook, accountId: string): number {
   if (accountId === GENERAL_ACCOUNT_ID) return draft.finance.checking.balance
   return (
     draft.finance.checking.categories.find((c) => c.id === accountId)?.balance ??
@@ -104,7 +104,7 @@ function eventDeltas(ev: LedgerEvent): { accountId: string; delta: number }[] {
 }
 
 /** A coin payment changes the portfolio's holdings (and its cached USD value right away, until live prices refresh it). */
-function applyCryptoDelta(draft: UserData, ev: LedgerEvent, sign: 1 | -1): void {
+function applyCryptoDelta(draft: FinanceBook, ev: LedgerEvent, sign: 1 | -1): void {
   const entry = draft.finance.savings.find((e) => e.id === ev.accountId)
   if (!entry?.holdings || !ev.crypto) return
   const direction = ev.type === 'income' ? 1 : -1
@@ -117,7 +117,7 @@ function applyCryptoDelta(draft: UserData, ev: LedgerEvent, sign: 1 | -1): void 
   entry.amount = addCents(entry.amount, sign * direction * ev.amount)
 }
 
-function applyEventEffects(draft: UserData, ev: LedgerEvent): void {
+function applyEventEffects(draft: FinanceBook, ev: LedgerEvent): void {
   if (ev.crypto && ev.type !== 'transfer') {
     applyCryptoDelta(draft, ev, 1)
     ev.effectsApplied = true
@@ -127,7 +127,7 @@ function applyEventEffects(draft: UserData, ev: LedgerEvent): void {
   ev.effectsApplied = true
 }
 
-function revertEventEffects(draft: UserData, ev: LedgerEvent): void {
+function revertEventEffects(draft: FinanceBook, ev: LedgerEvent): void {
   if (ev.crypto && ev.type !== 'transfer') {
     applyCryptoDelta(draft, ev, -1)
     ev.effectsApplied = false
@@ -138,14 +138,14 @@ function revertEventEffects(draft: UserData, ev: LedgerEvent): void {
 }
 
 /** Brings a card's balance effects in line with its `confirmed` flag. */
-function syncEffects(draft: UserData, ev: LedgerEvent): void {
+function syncEffects(draft: FinanceBook, ev: LedgerEvent): void {
   if (ev.confirmed && !ev.effectsApplied) applyEventEffects(draft, ev)
   else if (!ev.confirmed && ev.effectsApplied) revertEventEffects(draft, ev)
 }
 
 export type NewLedgerEvent = Omit<LedgerEvent, 'id' | 'effectsApplied'>
 
-export function addEvent(draft: UserData, fields: NewLedgerEvent): LedgerEvent {
+export function addEvent(draft: FinanceBook, fields: NewLedgerEvent): LedgerEvent {
   const ev: LedgerEvent = { ...fields, id: newId(), effectsApplied: false }
   draft.ledger.events.push(ev)
   syncEffects(draft, ev)
@@ -154,7 +154,7 @@ export function addEvent(draft: UserData, fields: NewLedgerEvent): LedgerEvent {
 
 /** Edits an event; if its amount was already applied, it is reverted with the old values and re-applied with the new. */
 export function editEvent(
-  draft: UserData,
+  draft: FinanceBook,
   id: string,
   patch: Partial<Omit<LedgerEvent, 'id' | 'effectsApplied'>>
 ): void {
@@ -165,14 +165,14 @@ export function editEvent(
   syncEffects(draft, ev)
 }
 
-export function setEventConfirmed(draft: UserData, id: string, confirmed: boolean): void {
+export function setEventConfirmed(draft: FinanceBook, id: string, confirmed: boolean): void {
   const ev = draft.ledger.events.find((e) => e.id === id)
   if (!ev) return
   ev.confirmed = confirmed
   syncEffects(draft, ev)
 }
 
-export function deleteEvent(draft: UserData, id: string): void {
+export function deleteEvent(draft: FinanceBook, id: string): void {
   const ev = draft.ledger.events.find((e) => e.id === id)
   if (!ev) return
   if (ev.effectsApplied) revertEventEffects(draft, ev)
@@ -231,7 +231,7 @@ const HORIZON_DAYS = 120
  * it (capped at two years). Idempotent — safe to call whenever the finance
  * module opens or the viewed month changes.
  */
-export function materializeSubscriptions(draft: UserData, todayIso: string, until?: string): void {
+export function materializeSubscriptions(draft: FinanceBook, todayIso: string, until?: string): void {
   const defaultHorizon = addDays(todayIso, HORIZON_DAYS)
   const cap = addDays(todayIso, 730)
   const horizon = until && until > defaultHorizon ? (until < cap ? until : cap) : defaultHorizon
@@ -278,7 +278,7 @@ function occurrenceIndex(sub: Subscription, date: string): number {
  * payments; resuming continues from the next occurrence that is still ahead.
  */
 export function updateSubscription(
-  draft: UserData,
+  draft: FinanceBook,
   id: string,
   patch: Partial<Pick<Subscription, 'title' | 'amount' | 'accountId' | 'category' | 'counterpartyId' | 'active'>>,
   todayIso: string
@@ -315,7 +315,7 @@ export function updateSubscription(
  * restarts the schedule from `nextDate` with the new period. Confirmed
  * payments (history) are kept as they are.
  */
-export function rescheduleSubscription(draft: UserData, id: string, every: Recurrence, nextDate: string): void {
+export function rescheduleSubscription(draft: FinanceBook, id: string, every: Recurrence, nextDate: string): void {
   const sub = draft.ledger.subscriptions.find((s) => s.id === id)
   if (!sub) return
   draft.ledger.events = draft.ledger.events.filter((e) => !(e.subscriptionId === id && !e.confirmed))
@@ -325,7 +325,7 @@ export function rescheduleSubscription(draft: UserData, id: string, every: Recur
 }
 
 /** The date of the next payment still waiting to be made (planned event), else the next one to be generated. */
-export function nextPaymentDate(draft: Pick<UserData, 'ledger'>, sub: Subscription): string {
+export function nextPaymentDate(draft: Pick<FinanceBook, 'ledger'>, sub: Subscription): string {
   const planned = draft.ledger.events
     .filter((e) => e.subscriptionId === sub.id && !e.confirmed)
     .map((e) => e.date)
@@ -333,14 +333,14 @@ export function nextPaymentDate(draft: Pick<UserData, 'ledger'>, sub: Subscripti
   return planned ?? nextSubscriptionDate(sub)
 }
 
-export function deleteSubscription(draft: UserData, id: string): void {
+export function deleteSubscription(draft: FinanceBook, id: string): void {
   draft.ledger.events = draft.ledger.events.filter((e) => !(e.subscriptionId === id && !e.confirmed))
   for (const ev of draft.ledger.events) if (ev.subscriptionId === id) ev.subscriptionId = null
   draft.ledger.subscriptions = draft.ledger.subscriptions.filter((s) => s.id !== id)
 }
 
 export function createSubscription(
-  draft: UserData,
+  draft: FinanceBook,
   fields: Pick<Subscription, 'title' | 'amount' | 'accountId' | 'category' | 'counterpartyId' | 'every' | 'startDate'>
 ): Subscription {
   const sub: Subscription = { ...fields, id: newId(), generated: 0, active: true }
@@ -350,7 +350,7 @@ export function createSubscription(
 
 // ---- counterparties --------------------------------------------------------
 
-export function deleteCounterparty(draft: UserData, id: string): void {
+export function deleteCounterparty(draft: FinanceBook, id: string): void {
   for (const ev of draft.ledger.events) if (ev.counterpartyId === id) ev.counterpartyId = null
   for (const sub of draft.ledger.subscriptions) if (sub.counterpartyId === id) sub.counterpartyId = null
   draft.ledger.counterparties = draft.ledger.counterparties.filter((c) => c.id !== id)
@@ -368,7 +368,7 @@ export function counterpartyName(counterparties: Counterparty[], id: string | nu
  * event later would move the old number in the new currency.
  */
 export function convertEventsForAccount(
-  draft: UserData,
+  draft: FinanceBook,
   accountId: string,
   from: CurrencyCode,
   to: CurrencyCode,
@@ -386,7 +386,7 @@ export function convertEventsForAccount(
 
 /** A checking category was deleted (its balance merged into the general one): point its events there. */
 export function retargetEventsToGeneral(
-  draft: UserData,
+  draft: FinanceBook,
   removedAccountId: string,
   from: CurrencyCode,
   to: CurrencyCode,

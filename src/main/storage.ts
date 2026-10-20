@@ -243,6 +243,23 @@ function normalizeUserData(data: UserData): UserData {
   if (typeof data.profile.displayName === 'undefined') {
     data.profile.displayName = null
   }
+  if (!Array.isArray(data.firms)) data.firms = []
+  for (const firm of data.firms) {
+    if (!firm.finance) firm.finance = { checking: { balance: 0, currency: 'PLN', categories: [] }, savings: [] }
+    if (!Array.isArray(firm.finance.checking.categories)) firm.finance.checking.categories = []
+    if (!Array.isArray(firm.finance.savings)) firm.finance.savings = []
+    if (!firm.ledger) firm.ledger = { counterparties: [], events: [], subscriptions: [] }
+    if (!Array.isArray(firm.ledger.counterparties)) firm.ledger.counterparties = []
+    if (!Array.isArray(firm.ledger.events)) firm.ledger.events = []
+    if (!Array.isArray(firm.ledger.subscriptions)) firm.ledger.subscriptions = []
+    firm.ledger.events.forEach((e) => {
+      if (!Array.isArray(e.attachments)) e.attachments = []
+    })
+    if (!firm.tax) {
+      firm.tax = { form: 'skala', ryczaltRate: 12, zus: 'full', smallPlusBase: null, sickness: true, vatPayer: false, vatPeriod: 'month', params: {} }
+    }
+    if (!firm.tax.params) firm.tax.params = {}
+  }
   return data
 }
 

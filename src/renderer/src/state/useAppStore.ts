@@ -101,6 +101,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   logout: () => {
     flushPendingSave()
     useModuleStore.getState().setModule('life')
+    useModuleStore.getState().setScope('personal')
     window.api.auth.setRememberedUsername(null)
     set({ username: null, data: null, status: 'idle', error: null })
   },

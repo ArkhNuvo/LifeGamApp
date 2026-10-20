@@ -1,6 +1,6 @@
 {
   "name": "lifegam",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "LifeGam - gamify your life",
   "main": "./out/main/index.js",
   "author": "aiarh",

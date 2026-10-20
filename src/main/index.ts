@@ -22,6 +22,7 @@ import { extractDocument, getAiStatus, setAiConfig } from './ai'
 import * as telegram from './telegram'
 import * as exchangeRates from './exchangeRates'
 import * as crypto from './crypto'
+import * as reports from './reports'
 import { initUpdater, checkForUpdates, quitAndInstall } from './updater'
 import type { AiExtractRequest, PickedFile, TelegramCatalogPayload, UserData } from '../shared/types'
 
@@ -154,6 +155,10 @@ function registerIpcHandlers(): void {
   ipcMain.handle('updates:check', () => checkForUpdates())
   ipcMain.handle('updates:quitAndInstall', () => quitAndInstall())
 
+  ipcMain.handle('reports:savePdf', (_e, html: string, name: string, landscape: boolean) =>
+    reports.savePdf(html, name, landscape)
+  )
+  ipcMain.handle('reports:saveText', (_e, content: string, name: string) => reports.saveText(content, name))
   ipcMain.handle('crypto:prices', (_e, tickers: string[], force?: boolean) => crypto.getPrices(tickers, !!force))
   ipcMain.handle('rates:get', () => exchangeRates.getRates(false))
   ipcMain.handle('rates:refresh', () => exchangeRates.getRates(true))

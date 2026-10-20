@@ -1,7 +1,10 @@
 import { newId } from './ids'
 import { canConvert, convert } from './currency'
 import { convertEventsForAccount, GENERAL_ACCOUNT_ID, retargetEventsToGeneral } from './ledger'
-import type { CurrencyCode, UserData } from './types'
+import type { CurrencyCode, FinanceBook, UserData } from './types'
+
+/** Personal books also carry kanban cards tied to accounts; firm books don't. */
+type Book = FinanceBook & { kanban?: UserData['kanban'] }
 
 export type AccountKind = 'checking' | 'savings' | 'crypto'
 
@@ -15,7 +18,7 @@ export interface NewAccount {
 }
 
 /** A checking account is a category under the general balance; a savings account is a savings entry. */
-export function addAccount(draft: UserData, fields: NewAccount): string {
+export function addAccount(draft: Book, fields: NewAccount): string {
   const id = newId()
   if (fields.kind === 'checking') {
     draft.finance.checking.categories.push({
@@ -40,13 +43,14 @@ export function addAccount(draft: UserData, fields: NewAccount): string {
  * a later revert would subtract the old number in the new currency.
  */
 function convertTiedCards(
-  draft: UserData,
+  draft: Book,
   accountId: string | null,
   from: CurrencyCode,
   to: CurrencyCode,
   rates: Rates,
   retargetTo?: string | null
 ): void {
+  if (!draft.kanban) return
   const cards = [
     ...Object.values(draft.kanban.months).flatMap((m) => m.columns.flatMap((c) => c.cards)),
     ...draft.kanban.unassigned
@@ -69,7 +73,7 @@ export function canSwitchCurrency(from: CurrencyCode, to: CurrencyCode, rates: R
  * too unless `convertBalance` is false (the user typed a new balance).
  */
 export function changeAccountCurrency(
-  draft: UserData,
+  draft: Book,
   accountId: string,
   to: CurrencyCode,
   rates: Rates,
@@ -107,7 +111,7 @@ export function changeAccountCurrency(
 }
 
 /** Deleting a checking account folds its balance (and cards/events) into the general balance. */
-export function removeCheckingAccount(draft: UserData, accountId: string, rates: Rates): void {
+export function removeCheckingAccount(draft: Book, accountId: string, rates: Rates): void {
   const category = draft.finance.checking.categories.find((c) => c.id === accountId)
   if (!category) return
   const general = draft.finance.checking
@@ -118,12 +122,12 @@ export function removeCheckingAccount(draft: UserData, accountId: string, rates:
   general.categories = general.categories.filter((c) => c.id !== accountId)
 }
 
-export function removeSavingsAccount(draft: UserData, accountId: string): void {
+export function removeSavingsAccount(draft: Book, accountId: string): void {
   draft.finance.savings = draft.finance.savings.filter((e) => e.id !== accountId)
 }
 
 /** Whether any event or subscription refers to this account. */
-export function accountHasHistory(draft: Pick<UserData, 'ledger'>, accountId: string): boolean {
+export function accountHasHistory(draft: Pick<FinanceBook, 'ledger'>, accountId: string): boolean {
   return (
     draft.ledger.events.some((e) => e.accountId === accountId || e.toAccountId === accountId) ||
     draft.ledger.subscriptions.some((s) => s.accountId === accountId)

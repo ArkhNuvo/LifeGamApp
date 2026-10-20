@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAppStore } from '../../state/useAppStore'
+import { useBookSelect, useUpdateBook } from '../../lib/book'
 import { useT } from '../../lib/i18n/useT'
 import { newId } from '../../lib/ids'
 import { deleteCounterparty } from '../../lib/ledger'
@@ -16,9 +16,9 @@ const KIND_KEYS = {
 /** The registry of services, shops and organizations events can be tied to. */
 export default function CounterpartiesModal({ onClose }: { onClose: () => void }): JSX.Element {
   const t = useT()
-  const updateData = useAppStore((s) => s.updateData)
-  const counterparties = useAppStore((s) => s.data?.ledger.counterparties ?? [])
-  const events = useAppStore((s) => s.data?.ledger.events ?? [])
+  const updateData = useUpdateBook()
+  const counterparties = useBookSelect((b) => b?.ledger.counterparties ?? [])
+  const events = useBookSelect((b) => b?.ledger.events ?? [])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [kind, setKind] = useState<CounterpartyKind>('service')

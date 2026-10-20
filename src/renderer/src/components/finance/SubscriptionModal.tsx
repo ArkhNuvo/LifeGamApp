@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAppStore } from '../../state/useAppStore'
+import { useBookSelect, useUpdateBook } from '../../lib/book'
 import { useT } from '../../lib/i18n/useT'
 import { todayISO } from '../../lib/date'
 import { newId } from '../../lib/ids'
@@ -29,10 +29,10 @@ interface Props {
 export default function SubscriptionModal({ subscriptionId, onClose }: Props): JSX.Element | null {
   const t = useT()
   const creating = subscriptionId === 'new'
-  const updateData = useAppStore((s) => s.updateData)
-  const sub = useAppStore((s) => s.data?.ledger.subscriptions.find((x) => x.id === subscriptionId))
-  const data = useAppStore((s) => s.data)
-  const counterparties = useAppStore((s) => s.data?.ledger.counterparties ?? [])
+  const updateData = useUpdateBook()
+  const sub = useBookSelect((b) => b?.ledger.subscriptions.find((x) => x.id === subscriptionId))
+  const data = useBookSelect((b) => b)
+  const counterparties = useBookSelect((b) => b?.ledger.counterparties ?? [])
   const accounts = useAccounts()
   const payAccounts = accounts.filter((a) => a.group === 'checking' || a.id === sub?.accountId)
   const initialNext = sub && data ? nextPaymentDate(data, sub) : todayISO()

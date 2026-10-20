@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useAppStore } from '../../state/useAppStore'
+import { useBookSelect, useUpdateBook } from '../../lib/book'
 import { useT } from '../../lib/i18n/useT'
 import {
   autoDetectMapping,
@@ -51,8 +51,8 @@ const PREVIEW_LIMIT = 300
 /** Bulk-imports transactions from a bank-statement CSV: map the columns, review the rows, confirm. */
 export default function ImportModal({ onClose }: { onClose: () => void }): JSX.Element {
   const t = useT()
-  const updateData = useAppStore((s) => s.updateData)
-  const events = useAppStore((s) => s.data?.ledger.events ?? [])
+  const updateData = useUpdateBook()
+  const events = useBookSelect((b) => b?.ledger.events ?? [])
   const accounts = useAccounts().filter((a) => !a.crypto)
 
   const [fileName, setFileName] = useState('')

@@ -78,6 +78,12 @@ const api = {
       return () => ipcRenderer.removeListener('updates:status', listener)
     }
   },
+  reports: {
+    savePdf: (html: string, name: string, landscape: boolean): Promise<string | null> =>
+      ipcRenderer.invoke('reports:savePdf', html, name, landscape),
+    saveText: (content: string, name: string): Promise<string | null> =>
+      ipcRenderer.invoke('reports:saveText', content, name)
+  },
   crypto: {
     prices: (tickers: string[], force?: boolean): Promise<CryptoPrices> =>
       ipcRenderer.invoke('crypto:prices', tickers, force)

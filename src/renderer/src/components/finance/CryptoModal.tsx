@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAppStore } from '../../state/useAppStore'
+import { useBookSelect, useUpdateBook } from '../../lib/book'
 import { useCryptoStore } from '../../state/useCryptoStore'
 import { useRatesStore } from '../../state/useRatesStore'
 import { useT } from '../../lib/i18n/useT'
@@ -22,8 +22,8 @@ interface Props {
 /** The coins held on a crypto account: ticker, amount, live price and value in USD and the main currency. */
 export default function CryptoModal({ accountId, onClose, onSettings }: Props): JSX.Element {
   const t = useT()
-  const updateData = useAppStore((s) => s.updateData)
-  const entry = useAppStore((s) => s.data?.finance.savings.find((e) => e.id === accountId))
+  const updateData = useUpdateBook()
+  const entry = useBookSelect((b) => b?.finance.savings.find((e) => e.id === accountId))
   const prices = useCryptoStore((s) => s.prices)
   const fetchedAt = useCryptoStore((s) => s.fetchedAt)
   const loading = useCryptoStore((s) => s.loading)

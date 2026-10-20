@@ -1,14 +1,55 @@
-import { useAppStore } from '../../state/useAppStore'
+import { useBookSelect } from '../../lib/book'
 import { useRatesStore } from '../../state/useRatesStore'
 import { useT } from '../../lib/i18n/useT'
 import { canConvert, convert } from '../../lib/currency'
 import { monthlyCost, nextSubscriptionDate } from '../../lib/ledger'
 import { detectSubscriptions } from '../../lib/subscriptionDetect'
 import { todayISO } from '../../lib/date'
+import { useState } from 'react'
+import { useFirm } from '../../lib/book'
+import { useFirmLabel } from '../../lib/firmLabels'
+import { formatNip } from '../../lib/polishTax'
+import { useModuleStore } from '../../state/useModuleStore'
 import ExchangeRatesButton from '../common/ExchangeRatesButton'
+import FirmLogo from './firm/FirmLogo'
+import FirmPickerModal from './firm/FirmPickerModal'
+import TaxPanel from './firm/TaxPanel'
+import { useFirmYear } from './firm/useFirmYear'
 import { formatMain, formatMoney, useAccounts, useMainCurrency } from './useFinance'
+import type { Firm } from '../../lib/types'
+
+const pln = (n: number): string => `${Math.round(n).toLocaleString('pl-PL')} zł`
+
+/** Top of the firm's panel: revenue, costs and balance of the month, with the year so far. */
+function FirmSummary({ firm, month }: { firm: Firm; month: string }): JSX.Element {
+  const F = useFirmLabel()
+  const { months, monthIndex } = useFirmYear(firm, month)
+  const m = months[monthIndex - 1]
+  const ytd = months.slice(0, monthIndex).reduce(
+    (acc, f) => ({ revenue: acc.revenue + f.revenue, costs: acc.costs + f.costs }),
+    { revenue: 0, costs: 0 }
+  )
+  const tile = (label: string, value: number, year: number, cls = ''): JSX.Element => (
+    <div className="fin-tile">
+      <span className="fin-tile-label">{label}</span>
+      <span className={`fin-tile-value ${cls}`}>{pln(value)}</span>
+      <small className="fin-hint">
+        {F('sum.ytd')}: {pln(year)}
+      </small>
+    </div>
+  )
+  return (
+    <div className="fin-subtotals fin-subtotals--3">
+      {tile(F('sum.revenue'), m?.revenue ?? 0, ytd.revenue)}
+      {tile(F('sum.costs'), m?.costs ?? 0, ytd.costs)}
+      {tile(F('sum.balance'), m?.income ?? 0, ytd.revenue - ytd.costs, (m?.income ?? 0) < 0 ? 'fin-negative' : '')}
+    </div>
+  )
+}
 
 interface Props {
+  /** The month shown in the module (YYYY-MM). */
+  month: string
   onAddAccount: () => void
   onEditAccount: (id: string) => void
   onNewSubscription: () => void
@@ -19,6 +60,7 @@ interface Props {
 
 /** Left column of the finance module: mode, totals, accounts, and recurring payments. */
 export default function FinanceProfile({
+  month,
   onAddAccount,
   onEditAccount,
   onNewSubscription,
@@ -27,8 +69,12 @@ export default function FinanceProfile({
   onOpenCrypto
 }: Props): JSX.Element {
   const t = useT()
-  const subscriptions = useAppStore((s) => s.data?.ledger.subscriptions ?? [])
-  const events = useAppStore((s) => s.data?.ledger.events ?? [])
+  const F = useFirmLabel()
+  const firm = useFirm()
+  const setScope = useModuleStore((s) => s.setScope)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const subscriptions = useBookSelect((b) => b?.ledger.subscriptions ?? [])
+  const events = useBookSelect((b) => b?.ledger.events ?? [])
   const rates = useRatesStore((s) => s.rates?.rates ?? null)
   const accounts = useAccounts()
   const main = useMainCurrency()
@@ -45,7 +91,7 @@ export default function FinanceProfile({
       .sort()[0]
     return (upcoming ?? fallback).slice(5).split('-').reverse().join('.')
   }
-  const ledger = useAppStore((s) => s.data?.ledger)
+  const ledger = useBookSelect((b) => b?.ledger)
   const found = ledger ? detectSubscriptions({ ledger }, todayISO()).length : 0
   const monthlySubs = subscriptions
     .filter((s) => s.active)
@@ -54,28 +100,46 @@ export default function FinanceProfile({
   return (
     <div className="fin-profile">
       <div className="fin-mode">
-        <button type="button" className="fin-mode-btn active">
+        <button type="button" className={`fin-mode-btn${firm ? '' : ' active'}`} onClick={() => setScope('personal')}>
           {t('fin.modePersonal')}
         </button>
-        <button type="button" className="fin-mode-btn" disabled title={t('fin.modeBusinessSoon')}>
+        <button type="button" className={`fin-mode-btn${firm ? ' active' : ''}`} onClick={() => setPickerOpen(true)}>
           {t('fin.modeBusiness')}
         </button>
       </div>
 
-      <div className="fin-total">
-        <span className="fin-tile-label">{t('fin.total')}</span>
-        <span className="fin-total-value">{formatMain(checkingTotal + savingsTotal, main)}</span>
-      </div>
-      <div className="fin-subtotals">
-        <div className="fin-tile">
-          <span className="fin-tile-label">{t('fin.checkingTotal')}</span>
-          <span className="fin-tile-value">{formatMain(checkingTotal, main)}</span>
-        </div>
-        <div className="fin-tile">
-          <span className="fin-tile-label">{t('fin.savingsTotal')}</span>
-          <span className="fin-tile-value">{formatMain(savingsTotal, main)}</span>
-        </div>
-      </div>
+      {firm ? (
+        <>
+          <div className="firm-head">
+            <FirmLogo name={firm.name} logo={firm.logo} size={40} />
+            <div className="firm-head-text">
+              <span className="firm-head-name">{firm.name}</span>
+              <span className="fin-hint">NIP {formatNip(firm.nip)}</span>
+            </div>
+            <button type="button" className="btn" onClick={() => setPickerOpen(true)}>
+              {F('firms.change')}
+            </button>
+          </div>
+          <FirmSummary firm={firm} month={month} />
+        </>
+      ) : (
+        <>
+          <div className="fin-total">
+            <span className="fin-tile-label">{t('fin.total')}</span>
+            <span className="fin-total-value">{formatMain(checkingTotal + savingsTotal, main)}</span>
+          </div>
+          <div className="fin-subtotals">
+            <div className="fin-tile">
+              <span className="fin-tile-label">{t('fin.checkingTotal')}</span>
+              <span className="fin-tile-value">{formatMain(checkingTotal, main)}</span>
+            </div>
+            <div className="fin-tile">
+              <span className="fin-tile-label">{t('fin.savingsTotal')}</span>
+              <span className="fin-tile-value">{formatMain(savingsTotal, main)}</span>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="fin-section-head">
         <div className="fin-section-title">{t('fin.accountsTitle')}</div>
@@ -103,6 +167,8 @@ export default function FinanceProfile({
         {t('fin.addAccount')}
       </button>
 
+      {firm && <TaxPanel firm={firm} month={month} />}
+
       <div className="fin-section-title">{t('fin.subsTitle')}</div>
       <div className="fin-list">
         {subscriptions.length === 0 && <div className="fin-empty">{t('fin.subsEmpty')}</div>}
@@ -126,6 +192,8 @@ export default function FinanceProfile({
         </button>
         <div className="fin-hint">{t('fin.subsPerMonth', { amount: formatMain(monthlySubs, main) })}</div>
       </div>
+
+      {pickerOpen && <FirmPickerModal onClose={() => setPickerOpen(false)} />}
     </div>
   )
 }

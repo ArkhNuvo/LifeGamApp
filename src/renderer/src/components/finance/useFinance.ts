@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../../state/useAppStore'
+import { useBookSelect } from '../../lib/book'
 import { useT } from '../../lib/i18n/useT'
 import { listAccounts, type LedgerAccount } from '../../lib/ledger'
 import { CURRENCY_SYMBOLS } from '../../lib/currency'
@@ -8,8 +9,8 @@ import type { CurrencyCode } from '../../lib/types'
 /** All accounts events can touch (general checking balance, its categories, savings). */
 export function useAccounts(): LedgerAccount[] {
   const t = useT()
-  const finance = useAppStore((s) => s.data?.finance)
-  const generalName = t('finance.categoryGeneralOption')
+  const finance = useBookSelect((b) => b?.finance)
+  const generalName = finance?.checking.generalName?.trim() || t('finance.categoryGeneralOption')
   return useMemo(
     () => (finance ? listAccounts({ finance }, generalName) : []),
     [finance, generalName]

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../../state/useAppStore'
+import { useBookSelect, useUpdateBook } from '../../lib/book'
 import { useRatesStore } from '../../state/useRatesStore'
 import { useCryptoStore } from '../../state/useCryptoStore'
 import { useLanguageStore } from '../../state/useLanguageStore'
@@ -18,6 +19,8 @@ import {
 } from '../../lib/ledger'
 import { fromDataUrl, prepareForAi, toDataUrl } from '../../lib/documents'
 import { normalizeTicker } from '../../lib/crypto'
+import { useFirm } from '../../lib/book'
+import type { KpirColumn, LedgerDocument, LedgerItem } from '../../lib/types'
 import { pickPaymentAccount, type PaymentReason } from '../../lib/paymentAccount'
 import type {
   AiExtraction,
@@ -29,6 +32,7 @@ import type {
   Recurrence
 } from '../../lib/types'
 import AiSettingsModal from './AiSettingsModal'
+import DocumentItems, { recalcItem } from './firm/DocumentItems'
 import FilePreviewModal from './FilePreviewModal'
 import FileViewer from './FileViewer'
 import { useAccounts } from './useFinance'
@@ -71,9 +75,9 @@ const KIND_KEYS: Record<CounterpartyKind, 'fin.kindService' | 'fin.kindShop' | '
 
 export default function EventModal({ initial, defaultDate, onClose }: Props): JSX.Element {
   const t = useT()
-  const updateData = useAppStore((s) => s.updateData)
-  const counterparties = useAppStore((s) => s.data?.ledger.counterparties ?? [])
-  const events = useAppStore((s) => s.data?.ledger.events ?? [])
+  const updateData = useUpdateBook()
+  const counterparties = useBookSelect((b) => b?.ledger.counterparties ?? [])
+  const events = useBookSelect((b) => b?.ledger.events ?? [])
   const rates = useRatesStore((s) => s.rates?.rates ?? null)
   const accounts = useAccounts()
   const today = todayISO()
@@ -100,7 +104,7 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
   const [newCard, setNewCard] = useState<string | null>(null)
   const [rememberCard, setRememberCard] = useState(true)
   const settings = useAppStore((s) => s.data?.settings)
-  const savings = useAppStore((s) => s.data?.finance.savings)
+  const savings = useBookSelect((b) => b?.finance.savings)
   const prices = useCryptoStore((s) => s.prices)
   const fetchPrices = useCryptoStore((s) => s.fetch)
   /** Events flagged by the CSV import are already reflected in the real balances, so editing them leaves balances alone by default. */
@@ -117,6 +121,10 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
   )
   const [confirmedTouched, setConfirmedTouched] = useState(!!initial && !placeholder)
   const [recurrence, setRecurrence] = useState<Recurrence | ''>('')
+  // Firm books: the document's details and its lines booked in KPiR columns.
+  const firm = useFirm()
+  const [doc, setDoc] = useState<LedgerDocument>(initial?.doc ?? { number: '' })
+  const [items, setItems] = useState<LedgerItem[]>(initial?.items ?? [])
   const [newCpName, setNewCpName] = useState<string | null>(null)
   const [newCpKind, setNewCpKind] = useState<CounterpartyKind>('service')
 
@@ -269,6 +277,32 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
     const notes: string[] = []
     setType(d.eventType)
     if (d.amount !== null) setAmount(String(d.amount))
+    if (firm) {
+      setDoc((prev) => ({
+        ...prev,
+        number: d.documentNumber ?? prev.number,
+        counterpartyName: d.counterpartyName ?? prev.counterpartyName,
+        counterpartyNip: d.counterpartyNip ?? prev.counterpartyNip
+      }))
+      const columns = ['7', '8', '10', '11', '12', '13', '16', '-']
+      const lines = d.items
+        .filter((it) => it.net !== null || it.gross !== null)
+        .map((it) => {
+          const base: LedgerItem = {
+            id: newId(),
+            description: it.description,
+            net: it.net ?? 0,
+            vatRate: it.vatRate,
+            vat: 0,
+            gross: it.gross ?? 0,
+            kpir: columns.includes(it.kpirColumn ?? '') ? (it.kpirColumn as KpirColumn) : null
+          }
+          // Keep what the document says; derive only what's missing.
+          if (it.net !== null && it.gross !== null) return { ...base, vat: Math.round((it.gross - it.net) * 100) / 100 }
+          return recalcItem(base, it.net !== null ? 'net' : 'gross')
+        })
+      if (lines.length > 0) setItems(lines)
+    }
     if (d.cryptoTicker && d.cryptoAmount) {
       setCryptoTicker(d.cryptoTicker)
       setCryptoQty(String(d.cryptoAmount))
@@ -343,7 +377,8 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
       language: LANGUAGE_NAMES[language] ?? 'English',
       today,
       categories: Array.from(new Set([...suggestionsFor('expense'), ...suggestionsFor('income')])),
-      counterparties: counterparties.map((c) => c.name)
+      counterparties: counterparties.map((c) => c.name),
+      business: !!firm
     })
     if (result.ok) {
       applyExtraction(result.data)
@@ -412,11 +447,14 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
       confirmed,
       attachments,
       review: null,
-      crypto: isCrypto ? { ticker: tickerSym, amount: cryptoQtyValue } : null
+      crypto: isCrypto ? { ticker: tickerSym, amount: cryptoQtyValue } : null,
+      ...(firm && type !== 'transfer'
+        ? { items: items.filter((it) => it.net !== 0 || it.gross !== 0 || it.description.trim()), doc: doc.number || doc.counterpartyName || doc.counterpartyNip || doc.ksef || doc.counterpartyAddress ? doc : null }
+        : {})
     }
-    updateData((draft) => {
+    updateData((draft, root) => {
       if (newCard && rememberCard) {
-        draft.settings.cardAccounts = { ...(draft.settings.cardAccounts ?? {}), [newCard]: accountId }
+        root.settings.cardAccounts = { ...(root.settings.cardAccounts ?? {}), [newCard]: accountId }
       }
       if (newCpId) {
         draft.ledger.counterparties.push({
@@ -463,7 +501,7 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
 
   return (
     <div className="modal-overlay">
-      <div className="modal-card fin-modal">
+      <div className={`modal-card fin-modal${firm ? ' fin-modal--wide' : ''}`}>
         <h2>{initial ? t('fin.editEvent') : t('fin.newEvent')}</h2>
 
         <div className="fin-type-switch">
@@ -770,6 +808,26 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
             </datalist>
           </div>
         </div>
+
+        {firm && type !== 'transfer' && (
+          <DocumentItems
+            type={type}
+            doc={doc}
+            onDoc={setDoc}
+            items={items}
+            onItems={(next) => {
+              setItems(next)
+              // While the amount is still empty, the lines fill it in.
+              if ((!amount || amountValue === 0) && next.length > 0) {
+                const gross = next.reduce((sum, it) => sum + it.gross, 0)
+                if (gross > 0) setAmount(String(Math.round(gross * 100) / 100))
+              }
+            }}
+            amount={Number.isNaN(amountValue) ? 0 : amountValue}
+            currency={account?.currency ?? ''}
+            onUseTotal={(gross) => changeAmount(String(gross))}
+          />
+        )}
 
         {!initial?.subscriptionId && type !== 'transfer' && (
           <div className="form-field">

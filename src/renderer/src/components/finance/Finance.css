@@ -1375,3 +1375,327 @@
   flex-wrap: wrap;
   gap: 6px;
 }
+
+/* ---- firm mode ---- */
+.firm-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  object-fit: contain;
+  background: var(--bg-3);
+}
+
+.firm-logo--initial {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+.firm-row {
+  gap: 6px;
+}
+
+.firm-row.active {
+  border-color: var(--accent);
+}
+
+.firm-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  padding: 2px 0;
+}
+
+.firm-row-text,
+.firm-head-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.firm-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+
+.firm-head-text {
+  flex: 1;
+}
+
+.firm-head-name {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fin-subtotals--3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.fin-subtotals--3 .fin-tile {
+  padding: 8px 10px;
+}
+
+.fin-subtotals--3 .fin-tile-value {
+  font-size: 15px;
+}
+
+.tax-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tax-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tax-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.tax-row--strong {
+  font-weight: 700;
+}
+
+.tax-value {
+  white-space: nowrap;
+}
+
+.tax-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.firm-params {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.firm-params .form-field span {
+  font-size: 12px;
+}
+
+.firm-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+
+.firm-doc summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.firm-doc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin-top: 6px;
+}
+
+.firm-doc-grid .form-field span {
+  font-size: 12px;
+}
+
+.firm-doc-wide {
+  grid-column: 1 / -1;
+}
+
+.firm-items-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.firm-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.firm-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr 0.9fr 1fr 1.6fr auto;
+  gap: 4px;
+  align-items: center;
+}
+
+.firm-item input,
+.firm-item select {
+  min-width: 0;
+  width: 100%;
+}
+
+.firm-item--head {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.firm-items-total {
+  font-size: 12px;
+  text-align: right;
+  opacity: 0.85;
+}
+
+.kpir-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kpir-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kpir-table {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-height: calc(100vh - 300px);
+}
+
+.kpir-table table,
+.rzis-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.kpir-table th,
+.kpir-table td,
+.rzis-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.kpir-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-2);
+  z-index: 1;
+}
+
+.kpir-table .num,
+.rzis-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.kpir-row {
+  cursor: pointer;
+}
+
+.kpir-row:hover {
+  background: rgba(128, 128, 128, 0.1);
+}
+
+.kpir-sub {
+  display: block;
+  opacity: 0.65;
+}
+
+.kpir-sum td {
+  font-weight: 700;
+  background: var(--bg-2);
+}
+
+.rzis {
+  max-width: 760px;
+}
+
+.rzis-code {
+  width: 40px;
+  font-weight: 700;
+}
+
+.rzis-total td {
+  font-weight: 700;
+  background: var(--bg-2);
+}
+
+/* ---- VAT ---- */
+.kpir-mode {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  opacity: 0.85;
+  cursor: help;
+  white-space: nowrap;
+}
+
+.kpir-mode--vat {
+  border-color: var(--accent);
+}
+
+.vat-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vat-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.vat-rates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.vat-box,
+.vat-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fin-income {
+  color: var(--fin-income);
+}
+
+.fin-jpk-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

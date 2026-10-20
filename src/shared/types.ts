@@ -157,6 +157,11 @@ export interface AiExtraction {
   /** For crypto payments: the coin ticker and the amount in that coin. */
   cryptoTicker: string | null
   cryptoAmount: number | null
+  /** Business documents: invoice lines with a suggested KPiR column, the document number and the other party. */
+  items: { description: string; net: number | null; vatRate: number | null; gross: number | null; kpirColumn: string | null }[]
+  documentNumber: string | null
+  counterpartyName: string | null
+  counterpartyNip: string | null
   amount: number | null
   currency: string | null
   date: string | null
@@ -170,6 +175,8 @@ export interface AiExtraction {
 }
 
 export interface AiExtractRequest {
+  /** A firm's document: also read the lines and suggest KPiR columns. */
+  business?: boolean
   dataBase64: string
   mime: string
   language: string
@@ -224,6 +231,9 @@ export interface LedgerEvent {
   attachments: Attachment[]
   /** Set by the CSV import on rows that look like a transfer between own accounts; cleared when the event is saved by hand. */
   review?: 'transfer' | 'document' | null
+  /** Document lines for the KPiR (firm books). */
+  items?: LedgerItem[]
+  doc?: LedgerDocument | null
   /** A payment made in a coin: `amount` stays the USD equivalent, this holds the coin amount that moved the portfolio. */
   crypto?: { ticker: string; amount: number } | null
 }
@@ -262,6 +272,95 @@ export interface FinanceStatsState {
   widgets: FinWidgetConfig[]
   /** Net worth / crypto value (main currency) by date, recorded as the app is used. */
   snapshots: Record<string, { total: number; crypto: number }>
+}
+
+export interface FinanceAccounts {
+  checking: {
+    balance: number
+    currency: CurrencyCode
+    categories: CheckingCategory[]
+    /** A custom name for the general checking balance; the localized default is used when empty. */
+    generalName?: string
+  }
+  savings: SavingsEntry[]
+}
+
+/** Everything the finance module works on: personal finances (UserData itself) or one firm. */
+export interface FinanceBook {
+  finance: FinanceAccounts
+  ledger: Ledger
+  financeStats?: FinanceStatsState
+}
+
+export type TaxForm = 'skala' | 'liniowy' | 'ryczalt'
+/** full = "duży ZUS", preferential = 24 months of the lower base, start = "ulga na start" (health only),
+ *  small_plus = "mały ZUS plus" (own base), none = no ZUS paid by the firm (e.g. insured through employment). */
+export type ZusScheme = 'full' | 'preferential' | 'start' | 'small_plus' | 'none'
+
+/** Yearly amounts the calculations depend on; defaults ship with the app and every one can be overridden. */
+export interface TaxParams {
+  minimumWage: number
+  /** Base of the full social contributions (60% of the forecast average wage). */
+  zusFullBase: number
+  /** Base of the preferential contributions (30% of the minimum wage). */
+  zusPreferentialBase: number
+  /** Minimum monthly health contribution for skala / liniowy. */
+  healthMin: number
+  /** Ryczałt flat health contribution for annual revenue up to 60k / 60–300k / above. */
+  healthRyczalt: [number, number, number]
+  /** Yearly cap on health contributions deductible under the flat 19% rate. */
+  liniowyHealthDeductionLimit: number
+}
+
+export interface FirmTax {
+  form: TaxForm
+  /** Ryczałt rate in percent (17, 15, 14, 12, 10, 8.5, 5.5, 3, 2). */
+  ryczaltRate: number
+  zus: ZusScheme
+  /** Own base for "mały ZUS plus". */
+  smallPlusBase: number | null
+  /** Voluntary sickness insurance. */
+  sickness: boolean
+  vatPayer: boolean
+  vatPeriod: 'month' | 'quarter'
+  /** Per-year overrides of the default parameters, keyed by year ("2026"). */
+  params: Record<string, Partial<TaxParams>>
+}
+
+export interface Firm extends FinanceBook {
+  id: string
+  name: string
+  nip: string
+  /** Stored PNG (attachment path); null = the initial letter is shown instead. */
+  logo: string | null
+  tax: FirmTax
+  createdAt: string
+}
+
+/** KPiR columns a document line can be booked in; '-' = not a KPiR entry (the owner's own ZUS, PIT, VAT payments). */
+export type KpirColumn = '7' | '8' | '10' | '11' | '12' | '13' | '16' | '-'
+
+/** One line of an invoice/receipt, booked in a KPiR column. */
+export interface LedgerItem {
+  id: string
+  description: string
+  net: number
+  /** VAT rate in percent; null = exempt / not subject. */
+  vatRate: number | null
+  vat: number
+  gross: number
+  kpir: KpirColumn | null
+  /** Optional override of the profit-and-loss line (RZiS) the line is reported in. */
+  rzis?: string | null
+}
+
+/** Accounting details of the document behind an event (firm books). */
+export interface LedgerDocument {
+  number: string
+  ksef?: string
+  counterpartyName?: string
+  counterpartyNip?: string
+  counterpartyAddress?: string
 }
 
 export interface Ledger {
@@ -317,10 +416,7 @@ export interface UserData {
     physical: number
     lastCheckinDate: string | null
   }
-  finance: {
-    checking: { balance: number; currency: CurrencyCode; categories: CheckingCategory[] }
-    savings: SavingsEntry[]
-  }
+  finance: FinanceAccounts
   /** Display preferences. `mainCurrency` is what totals and converted values are shown in. */
   settings: {
     mainCurrency: CurrencyCode
@@ -333,6 +429,8 @@ export interface UserData {
   }
   ledger: Ledger
   financeStats?: FinanceStatsState
+  /** Businesses kept as separate finance books (own accounts, events, KPiR and taxes). */
+  firms?: Firm[]
   skills: Skill[]
   kanban: {
     months: Record<string, KanbanMonth>

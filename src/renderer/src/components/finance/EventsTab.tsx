@@ -1,6 +1,6 @@
 import { formatCoinAmount } from '../../lib/crypto'
 import { useMemo, useState } from 'react'
-import { useAppStore } from '../../state/useAppStore'
+import { useBookSelect, useUpdateBook } from '../../lib/book'
 import { useRatesStore } from '../../state/useRatesStore'
 import { useT } from '../../lib/i18n/useT'
 import { counterpartyName, deleteEvent, monthOf, setEventConfirmed, summarizeMonth } from '../../lib/ledger'
@@ -32,9 +32,9 @@ interface Props {
 
 export default function EventsTab({ month, onEdit }: Props): JSX.Element {
   const t = useT()
-  const updateData = useAppStore((s) => s.updateData)
-  const events = useAppStore((s) => s.data?.ledger.events ?? [])
-  const counterparties = useAppStore((s) => s.data?.ledger.counterparties ?? [])
+  const updateData = useUpdateBook()
+  const events = useBookSelect((b) => b?.ledger.events ?? [])
+  const counterparties = useBookSelect((b) => b?.ledger.counterparties ?? [])
   const rates = useRatesStore((s) => s.rates?.rates ?? null)
   const accounts = useAccounts()
   const main = useMainCurrency()

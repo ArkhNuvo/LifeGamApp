@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useAppStore } from '../../state/useAppStore'
+import { useBookSelect, useUpdateBook } from '../../lib/book'
 import { useRatesStore } from '../../state/useRatesStore'
 import { useCryptoStore } from '../../state/useCryptoStore'
 import { useLanguageStore } from '../../state/useLanguageStore'
@@ -39,12 +39,12 @@ const rectOf = (w: FinWidgetConfig): Rect => ({ id: w.id, x: w.x, y: w.y, w: w.w
 export default function StatsBoard({ month }: { month: string }): JSX.Element {
   const lang = useLanguageStore((s) => s.language)
   const L = useMemo(() => makeLabel(lang), [lang])
-  const updateData = useAppStore((s) => s.updateData)
-  const stats = useAppStore((s) => s.data?.financeStats)
-  const events = useAppStore((s) => s.data?.ledger.events)
-  const subscriptions = useAppStore((s) => s.data?.ledger.subscriptions)
-  const counterparties = useAppStore((s) => s.data?.ledger.counterparties)
-  const savings = useAppStore((s) => s.data?.finance.savings)
+  const updateData = useUpdateBook()
+  const stats = useBookSelect((b) => b?.financeStats)
+  const events = useBookSelect((b) => b?.ledger.events)
+  const subscriptions = useBookSelect((b) => b?.ledger.subscriptions)
+  const counterparties = useBookSelect((b) => b?.ledger.counterparties)
+  const savings = useBookSelect((b) => b?.finance.savings)
   const rates = useRatesStore((s) => s.rates?.rates ?? null)
   const prices = useCryptoStore((s) => s.prices)
   const accounts = useAccounts()

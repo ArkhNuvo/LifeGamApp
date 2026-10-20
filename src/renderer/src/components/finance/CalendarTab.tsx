@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useAppStore } from '../../state/useAppStore'
+import { useBookSelect } from '../../lib/book'
 import { useLanguageStore } from '../../state/useLanguageStore'
 import { useT } from '../../lib/i18n/useT'
 import { todayISO } from '../../lib/date'
@@ -23,7 +23,7 @@ interface Props {
 export default function CalendarTab({ month, onEdit, onNewOnDate }: Props): JSX.Element {
   const t = useT()
   const language = useLanguageStore((s) => s.language)
-  const events = useAppStore((s) => s.data?.ledger.events ?? [])
+  const events = useBookSelect((b) => b?.ledger.events ?? [])
   const accounts = useAccounts()
   const today = todayISO()
 

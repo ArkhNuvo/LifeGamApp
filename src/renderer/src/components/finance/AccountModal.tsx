@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAppStore } from '../../state/useAppStore'
+import { useBookSelect, useUpdateBook } from '../../lib/book'
 import { useRatesStore } from '../../state/useRatesStore'
 import { useT } from '../../lib/i18n/useT'
 import { GENERAL_ACCOUNT_ID } from '../../lib/ledger'
@@ -26,15 +26,16 @@ interface Props {
 /** Create a new account (name, kind, currency) or edit an existing one. */
 export default function AccountModal({ accountId, onClose }: Props): JSX.Element {
   const t = useT()
-  const updateData = useAppStore((s) => s.updateData)
-  const generalCurrency = useAppStore((s) => s.data?.finance.checking.currency ?? 'USD')
-  const history = useAppStore((s) => (accountId && s.data ? accountHasHistory(s.data, accountId) : false))
+  const updateData = useUpdateBook()
+  const generalCurrency = useBookSelect((b) => b?.finance.checking.currency ?? 'USD')
+  const history = useBookSelect((b) => (accountId && b ? accountHasHistory(b, accountId) : false))
   const rates = useRatesStore((s) => s.rates?.rates ?? null)
   const accounts = useAccounts()
   const existing = accountId ? accounts.find((a) => a.id === accountId) : undefined
   const isGeneral = accountId === GENERAL_ACCOUNT_ID
+  const generalName = useBookSelect((b) => b?.finance.checking.generalName)
 
-  const [name, setName] = useState(existing?.name ?? '')
+  const [name, setName] = useState(isGeneral ? (generalName ?? '') : (existing?.name ?? ''))
   const [kind, setKind] = useState<AccountKind>(existing ? (existing.crypto ? 'crypto' : existing.group) : 'checking')
   const [currency, setCurrency] = useState<CurrencyCode>(existing?.currency ?? generalCurrency)
   const [balance, setBalance] = useState(existing ? String(existing.balance) : '')
@@ -58,6 +59,8 @@ export default function AccountModal({ accountId, onClose }: Props): JSX.Element
       }
       if (currencyChanged) changeAccountCurrency(draft, accountId, effectiveCurrency, rates, !balanceTouched)
       if (isGeneral) {
+        // The general balance can be renamed; an empty name brings back the default label.
+        draft.finance.checking.generalName = name.trim() || undefined
         if (balanceTouched) draft.finance.checking.balance = balanceValue
       } else if (existing.group === 'checking') {
         const category = draft.finance.checking.categories.find((c) => c.id === accountId)
@@ -93,12 +96,15 @@ export default function AccountModal({ accountId, onClose }: Props): JSX.Element
       <div className="modal-card fin-modal">
         <h2>{existing ? t('fin.accountTitle') : t('fin.newAccount')}</h2>
 
-        {!isGeneral && (
-          <div className="form-field">
-            <label>{t('fin.accountName')}</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-          </div>
-        )}
+        <div className="form-field">
+          <label>{t('fin.accountName')}</label>
+          <input
+            value={name}
+            placeholder={isGeneral ? t('finance.categoryGeneralOption') : undefined}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+          />
+        </div>
 
         <div className="form-field">
           <label>{t('fin.accountKind')}</label>

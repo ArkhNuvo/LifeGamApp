@@ -3,6 +3,8 @@ import { useAppStore } from '../state/useAppStore'
 import LanguageSwitcher from '../components/common/LanguageSwitcher'
 import { useT } from '../lib/i18n/useT'
 import type { TranslationKey } from '../lib/i18n'
+import TelegramAuth from './TelegramAuth'
+import TelegramRecover from './TelegramRecover'
 import './AuthPage.css'
 
 export default function AuthPage(): JSX.Element {
@@ -11,10 +13,23 @@ export default function AuthPage(): JSX.Element {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
+  const [telegram, setTelegram] = useState<'login' | 'reset' | null>(null)
+  const [recovering, setRecovering] = useState(false)
+  const [needName, setNeedName] = useState(false)
   const login = useAppStore((s) => s.login)
   const register = useAppStore((s) => s.register)
   const status = useAppStore((s) => s.status)
   const error = useAppStore((s) => s.error)
+
+  function startTelegram(purpose: 'login' | 'reset'): void {
+    // The request goes to the Telegram chat linked to this account, so the account must be named.
+    if (!username.trim()) {
+      setNeedName(true)
+      return
+    }
+    setNeedName(false)
+    setTelegram(purpose)
+  }
 
   async function handleSubmit(e: FormEvent): Promise<void> {
     e.preventDefault()
@@ -87,6 +102,27 @@ export default function AuthPage(): JSX.Element {
                 : t('auth.submitRegister')}
           </button>
         </form>
+
+        {mode === 'login' && !telegram && !recovering && (
+          <div className="auth-alt">
+            <button type="button" className="auth-link" onClick={() => startTelegram('login')}>
+              ✈ {t('auth.tgLogin')}
+            </button>
+            <button type="button" className="auth-link" onClick={() => startTelegram('reset')}>
+              {t('auth.forgot')}
+            </button>
+          </div>
+        )}
+        {mode === 'login' && !telegram && !recovering && (
+          <button type="button" className="auth-link auth-link--center" onClick={() => setRecovering(true)}>
+            {t('auth.recoverAll')}
+          </button>
+        )}
+        {recovering && <TelegramRecover remember={remember} onClose={() => setRecovering(false)} />}
+        {needName && !telegram && <div className="auth-error">{t('auth.tgNeedUsername')}</div>}
+        {telegram && (
+          <TelegramAuth purpose={telegram} username={username.trim()} remember={remember} onClose={() => setTelegram(null)} />
+        )}
       </div>
     </div>
   )

@@ -75,3 +75,70 @@ export async function fetchFile(apiToken: string, fileId: string, name: string |
   const mime = (res.headers.get('content-type') ?? 'application/octet-stream').split(';')[0]
   return { name: name ?? fileId, mime, size: bytes.length, dataBase64: bytes.toString('base64') }
 }
+
+/** Asks the bot to confirm a sign-in or password reset in the user's Telegram. Returns the request id. */
+export async function requestAuth(apiToken: string, purpose: 'login' | 'reset'): Promise<{ id: string } | { error: 'not_linked' | 'network' }> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiToken}` },
+      body: JSON.stringify({ purpose }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    })
+    if (res.status === 401 || res.status === 409) return { error: 'not_linked' }
+    if (!res.ok) return { error: 'network' }
+    return (await res.json()) as { id: string }
+  } catch {
+    return { error: 'network' }
+  }
+}
+
+export async function authStatus(apiToken: string, id: string): Promise<string> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/status?id=${encodeURIComponent(id)}`, {
+      headers: { Authorization: `Bearer ${apiToken}` },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    })
+    if (!res.ok) return 'network'
+    return ((await res.json()) as { status: string }).status
+  } catch {
+    return 'network'
+  }
+}
+
+export const BOT_USERNAME = 'LifeGamBot'
+
+/** Starts recovering a forgotten login: the server hands out a code for the user to send to the bot. */
+export async function recoverStart(): Promise<{ id: string; code: string } | null> {
+  try {
+    const res = await fetch(`${API_BASE}/recover/start`, { method: 'POST', signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
+    if (!res.ok) return null
+    return (await res.json()) as { id: string; code: string }
+  } catch {
+    return null
+  }
+}
+
+export async function recoverStatus(id: string): Promise<{ status: string; username?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/recover/status?id=${encodeURIComponent(id)}`, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
+    if (!res.ok) return { status: 'network' }
+    return (await res.json()) as { status: string; username?: string }
+  } catch {
+    return { status: 'network' }
+  }
+}
+
+/** The account a bot token belongs to, or null. */
+export async function whoami(apiToken: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/whoami`, {
+      headers: { Authorization: `Bearer ${apiToken}` },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    })
+    if (!res.ok) return null
+    return ((await res.json()) as { username: string }).username
+  } catch {
+    return null
+  }
+}

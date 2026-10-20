@@ -11,6 +11,8 @@ interface AppState {
   init: () => Promise<void>
   login: (username: string, password: string, remember: boolean) => Promise<boolean>
   register: (username: string, password: string, remember: boolean) => Promise<boolean>
+  /** Opens an account whose sign-in was confirmed elsewhere (in Telegram). */
+  completeLogin: (username: string, remember: boolean) => Promise<void>
   logout: () => void
   updateData: (mutator: (draft: UserData) => void) => void
 }
@@ -83,6 +85,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const data = await window.api.data.load(result.username)
     set({ username: result.username, data, status: 'ready', error: null })
     return true
+  },
+
+  completeLogin: async (username, remember) => {
+    set({ status: 'loading', error: null })
+    await window.api.auth.setRememberedUsername(remember ? username : null)
+    const data = await window.api.data.load(username)
+    set({ username, data, status: 'ready', error: null })
   },
 
   register: async (username, password, remember) => {

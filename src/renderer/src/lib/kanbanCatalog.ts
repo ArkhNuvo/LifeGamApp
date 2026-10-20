@@ -10,7 +10,8 @@ import type {
   KanbanColumn,
   TelegramCatalogCard,
   TelegramCatalogPayload,
-  UserData
+  UserData,
+  FinanceBook
 } from './types'
 
 function shapeCard(
@@ -35,6 +36,14 @@ function shapeCard(
       return { skillName: skill?.name ?? '?', subskillName: subskill?.name ?? null, xp: r.xp }
     })
   }
+}
+
+/** Accounts a payment from the bot may go to (crypto portfolios excluded). */
+function bookAccounts(book: FinanceBook, language: string): { id: string; name: string; currency: string }[] {
+  const general = book.finance.checking.generalName || (language === 'ru' ? 'Основной' : 'Main')
+  return listAccounts(book, general)
+    .filter((a) => !a.crypto)
+    .map((a) => ({ id: a.id, name: a.name, currency: a.currency }))
 }
 
 export function buildCatalogPayload(data: UserData): TelegramCatalogPayload {
@@ -114,9 +123,11 @@ export function buildCatalogPayload(data: UserData): TelegramCatalogPayload {
     skills,
     columns,
     checkingCategories: checkingCategories.map((c) => ({ id: c.id, name: c.name, currency: c.currency })),
-    financeAccounts: listAccounts(data, language === 'ru' ? 'Основной' : 'Main')
-      .filter((a) => !a.crypto)
-      .map((a) => ({ id: a.id, name: a.name, currency: a.currency })),
+    financeAccounts: bookAccounts(data, language),
+    financeBooks: [
+      { id: 'personal', kind: 'personal' as const, name: '', accounts: bookAccounts(data, language) },
+      ...(data.firms ?? []).map((f) => ({ id: f.id, kind: 'firm' as const, name: f.name, accounts: bookAccounts(f, language) }))
+    ],
     plannedCards,
     doneTodayCards,
     weekCards,

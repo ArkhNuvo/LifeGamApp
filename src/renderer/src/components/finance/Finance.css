@@ -1699,3 +1699,80 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.settings-password {
+  margin: 6px 0 12px;
+}
+
+.settings-password summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.settings-password-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+
+/* ---- staff ---- */
+.staff-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.staff-summary {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.staff-summary .fin-tile-value {
+  font-size: 15px;
+}
+
+.staff-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.staff-inactive {
+  opacity: 0.5;
+}
+
+.modal-card.staff-modal {
+  max-width: 980px;
+  width: 980px;
+}
+
+.staff-contracts {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.staff-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.staff-form,
+.staff-calc {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.staff-form .form-field span {
+  font-size: 12px;
+}
+
+.staff-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

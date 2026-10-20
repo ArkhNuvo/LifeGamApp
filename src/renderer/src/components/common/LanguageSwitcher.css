@@ -47,3 +47,20 @@
   color: var(--text-0);
   font-weight: 600;
 }
+
+.language-switcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.language-option {
+  gap: 8px;
+}
+
+.language-flag {
+  flex-shrink: 0;
+  border-radius: 2px;
+  /* keeps white stripes visible on light themes */
+  box-shadow: 0 0 0 1px rgba(128, 128, 128, 0.45);
+}

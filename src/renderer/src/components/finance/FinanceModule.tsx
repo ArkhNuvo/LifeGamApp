@@ -11,6 +11,8 @@ import AccountModal from './AccountModal'
 import AiSettingsModal from './AiSettingsModal'
 import CalendarTab from './CalendarTab'
 import KpirTab from './firm/KpirTab'
+import PersonnelTab from './firm/PersonnelTab'
+import { useFirmLabel } from '../../lib/firmLabels'
 import { useFirm } from '../../lib/book'
 import CounterpartiesModal from './CounterpartiesModal'
 import EventModal from './EventModal'
@@ -25,7 +27,7 @@ import StatsBoard from './StatsBoard'
 import SubscriptionModal from './SubscriptionModal'
 import './Finance.css'
 
-type Tab = 'events' | 'stats' | 'calendar' | 'kpir'
+type Tab = 'events' | 'stats' | 'calendar' | 'kpir' | 'staff'
 
 interface EventModalState {
   initial?: LedgerEvent
@@ -47,8 +49,9 @@ export default function FinanceModule(): JSX.Element {
   const [tab, setTab] = useState<Tab>('events')
   const firm = useFirm()
   // The KPiR tab exists only for firms; leaving a firm falls back to the events.
-  const shownTab: Tab = tab === 'kpir' && !firm ? 'events' : tab
-  const tabs: Tab[] = firm ? ['events', 'stats', 'calendar', 'kpir'] : ['events', 'stats', 'calendar']
+  const shownTab: Tab = (tab === 'kpir' || tab === 'staff') && !firm ? 'events' : tab
+  const F = useFirmLabel()
+  const tabs: Tab[] = firm ? ['events', 'stats', 'calendar', 'kpir', 'staff'] : ['events', 'stats', 'calendar']
   const [month, setMonth] = useState(monthOf(todayISO()))
   const [eventModal, setEventModal] = useState<EventModalState | null>(null)
   const [subscriptionId, setSubscriptionId] = useState<string | 'new' | null>(null)
@@ -97,7 +100,7 @@ export default function FinanceModule(): JSX.Element {
                   className={shownTab === id ? 'main-tab active' : 'main-tab'}
                   onClick={() => setTab(id)}
                 >
-                  {id === 'kpir' ? 'KPiR' : t(id === 'events' ? 'fin.tabEvents' : id === 'stats' ? 'fin.tabStats' : 'fin.tabCalendar')}
+                  {id === 'kpir' ? 'KPiR' : id === 'staff' ? F('staff.tab') : t(id === 'events' ? 'fin.tabEvents' : id === 'stats' ? 'fin.tabStats' : 'fin.tabCalendar')}
                 </button>
               ))}
             </div>
@@ -131,6 +134,7 @@ export default function FinanceModule(): JSX.Element {
             {shownTab === 'kpir' && firm && (
               <KpirTab firm={firm} month={month} onEdit={(initial) => setEventModal({ initial })} />
             )}
+            {shownTab === 'staff' && firm && <PersonnelTab firm={firm} month={month} />}
             {shownTab === 'calendar' && (
               <CalendarTab
                 month={month}

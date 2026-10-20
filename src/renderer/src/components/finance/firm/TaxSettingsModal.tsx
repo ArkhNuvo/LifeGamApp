@@ -111,6 +111,17 @@ export default function TaxSettingsModal({ firm, year, onClose }: { firm: Firm; 
 
         <div className="field-hint">{F(tax.vatPayer ? 'vat.modeVatHint' : 'vat.modeNoVatHint')}</div>
 
+        <label className="form-field">
+          <span>{F('staff.accident')}</span>
+          <input
+            type="number"
+            step="0.01"
+            value={tax.accidentRate ?? 1.67}
+            onChange={(e) => set('accidentRate', num(e.target.value))}
+            style={{ maxWidth: 120 }}
+          />
+        </label>
+
         <h3>{F('ts.params', { year })}</h3>
         <div className="field-hint">{F('ts.paramsHint')}</div>
         <div className="firm-params">

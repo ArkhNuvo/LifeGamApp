@@ -4,6 +4,7 @@ import { useRatesStore } from '../../state/useRatesStore'
 import { useT } from '../../lib/i18n/useT'
 import CurrencyCombobox from '../finance/CurrencyCombobox'
 import { useAccounts } from '../finance/useFinance'
+import type { TranslationKey } from '../../lib/i18n'
 
 /** App settings. Currently: the main currency that totals and converted values are shown in. */
 export default function SettingsModal({ onClose }: { onClose: () => void }): JSX.Element {
@@ -16,6 +17,28 @@ export default function SettingsModal({ onClose }: { onClose: () => void }): JSX
   const refresh = useRatesStore((s) => s.refresh)
   const settings = useAppStore((s) => s.data?.settings)
   const accounts = useAccounts().filter((a) => !a.crypto)
+  const username = useAppStore((s) => s.username)
+  const [pwOld, setPwOld] = useState('')
+  const [pwNew, setPwNew] = useState('')
+  const [pwRepeat, setPwRepeat] = useState('')
+  const [pwNote, setPwNote] = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function changePassword(): Promise<void> {
+    if (!username) return
+    if (pwNew !== pwRepeat) {
+      setPwNote({ ok: false, text: t('auth.passwordsDiffer') })
+      return
+    }
+    const res = await window.api.auth.changePassword(username, pwOld, pwNew)
+    if (res.ok) {
+      setPwOld('')
+      setPwNew('')
+      setPwRepeat('')
+      setPwNote({ ok: true, text: t('settings.passwordChanged') })
+    } else {
+      setPwNote({ ok: false, text: t(`auth.error.${res.error ?? 'login_failed'}` as TranslationKey) })
+    }
+  }
   const [digits, setDigits] = useState('')
   const [bindTo, setBindTo] = useState('')
   const bindings = Object.entries(settings?.cardAccounts ?? {})
@@ -120,6 +143,20 @@ export default function SettingsModal({ onClose }: { onClose: () => void }): JSX
             </button>
           </div>
         </div>
+
+        <details className="settings-password">
+          <summary>{t('settings.password')}</summary>
+          <div className="settings-password-grid">
+            <input type="password" placeholder={t('settings.passwordCurrent')} value={pwOld} onChange={(e) => setPwOld(e.target.value)} />
+            <input type="password" placeholder={t('settings.passwordNew')} value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
+            <input type="password" placeholder={t('settings.passwordRepeat')} value={pwRepeat} onChange={(e) => setPwRepeat(e.target.value)} />
+            <button type="button" className="btn" onClick={() => void changePassword()} disabled={!pwOld || !pwNew}>
+              {t('settings.passwordChange')}
+            </button>
+          </div>
+          {pwNote && <div className={pwNote.ok ? 'field-hint' : 'field-hint fin-negative'}>{pwNote.text}</div>}
+          <div className="field-hint">{t('settings.passwordTelegramHint')}</div>
+        </details>
 
         <div className="form-field">
           <label>{t('settings.rates')}</label>

@@ -8,6 +8,9 @@ import {
   registerUser,
   loginUser,
   autoLoginUser,
+  telegramTokenFor,
+  setPassword,
+  changePassword,
   getRememberedUsername,
   setRememberedUsername,
   loadUserData,
@@ -24,7 +27,16 @@ import * as exchangeRates from './exchangeRates'
 import * as crypto from './crypto'
 import * as reports from './reports'
 import { initUpdater, checkForUpdates, quitAndInstall } from './updater'
-import type { AiExtractRequest, PickedFile, TelegramCatalogPayload, UserData } from '../shared/types'
+import type {
+  AiExtractRequest,
+  PickedFile,
+  TelegramAuthPoll,
+  TelegramAuthStart,
+  TelegramRecoverPoll,
+  TelegramRecoverStart,
+  TelegramCatalogPayload,
+  UserData
+} from '../shared/types'
 
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024
 const MIME_BY_EXTENSION: Record<string, string> = {
@@ -71,7 +83,61 @@ function createWindow(): void {
   }
 }
 
+/** Telegram confirmations in flight (request id → account and purpose), and resets the owner approved. */
+const authRequests = new Map<string, { username: string; token: string; purpose: 'login' | 'reset' }>()
+const approvedResets = new Map<string, number>()
+const RESET_WINDOW_MS = 10 * 60 * 1000
+
 function registerIpcHandlers(): void {
+  ipcMain.handle('auth:telegramStart', async (_e, username: string, purpose: 'login' | 'reset'): Promise<TelegramAuthStart> => {
+    const found = telegramTokenFor(username)
+    if (!found) return { ok: false, error: 'user_not_found' }
+    if (!found.token) return { ok: false, error: 'not_linked' }
+    const res = await telegram.requestAuth(found.token, purpose)
+    if ('error' in res) return { ok: false, error: res.error }
+    authRequests.set(res.id, { username: found.username, token: found.token, purpose })
+    return { ok: true, id: res.id }
+  })
+  ipcMain.handle('auth:telegramPoll', async (_e, id: string): Promise<TelegramAuthPoll> => {
+    const req = authRequests.get(id)
+    if (!req) return { status: 'expired' }
+    const status = await telegram.authStatus(req.token, id)
+    if (status === 'approved') {
+      authRequests.delete(id)
+      if (req.purpose === 'reset') approvedResets.set(req.username.toLowerCase(), Date.now())
+      return { status: 'approved', purpose: req.purpose, username: req.username }
+    }
+    if (status === 'denied' || status === 'expired') authRequests.delete(id)
+    return { status: status === 'pending' || status === 'denied' || status === 'expired' ? status : 'network' }
+  })
+  ipcMain.handle('auth:recoverStart', async (): Promise<TelegramRecoverStart> => {
+    const res = await telegram.recoverStart()
+    return res ? { ok: true, id: res.id, code: res.code, bot: telegram.BOT_USERNAME } : { ok: false, error: 'network' }
+  })
+  ipcMain.handle('auth:recoverPoll', async (_e, id: string): Promise<TelegramRecoverPoll> => {
+    const res = await telegram.recoverStatus(id)
+    if (res.status !== 'approved' || !res.username) {
+      return { status: res.status === 'pending' || res.status === 'expired' ? res.status : 'network' }
+    }
+    // Telegram vouches for an account name; it counts only if this computer's account of that name is the one linked to it.
+    const local = telegramTokenFor(res.username)
+    if (!local) return { status: 'no_local', username: res.username }
+    const owner = local.token ? await telegram.whoami(local.token) : null
+    if (!owner || owner.toLowerCase() !== local.username.toLowerCase()) return { status: 'mismatch' }
+    approvedResets.set(local.username.toLowerCase(), Date.now())
+    return { status: 'approved', username: local.username }
+  })
+  ipcMain.handle('auth:resetPassword', (_e, username: string, password: string) => {
+    // Only right after the owner confirmed the reset in Telegram.
+    const at = approvedResets.get(username.toLowerCase())
+    if (!at || Date.now() - at > RESET_WINDOW_MS) return { ok: false, error: 'reset_not_confirmed' }
+    const result = setPassword(username, password)
+    if (result.ok) approvedResets.delete(username.toLowerCase())
+    return result
+  })
+  ipcMain.handle('auth:changePassword', (_e, username: string, oldPassword: string, newPassword: string) =>
+    changePassword(username, oldPassword, newPassword)
+  )
   ipcMain.handle('auth:listUsernames', () => listUsernames())
   ipcMain.handle('auth:register', (_e, username: string, password: string) =>
     registerUser(username, password)

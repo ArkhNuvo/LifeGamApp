@@ -151,6 +151,40 @@ export function loginUser(username: string, password: string): AuthResult {
   return { ok: true, username: entry.username }
 }
 
+function findEntry(username: string): UserIndexEntry | undefined {
+  return readIndex().find((u) => u.username.toLowerCase() === username.trim().toLowerCase())
+}
+
+/** The bot token of an account (from its data file), so it can sign in through Telegram before its data is loaded. */
+export function telegramTokenFor(username: string): { username: string; token: string | null } | null {
+  const entry = findEntry(username)
+  if (!entry) return null
+  try {
+    const data = JSON.parse(readFileSync(userDataPath(entry.username), 'utf-8')) as UserData
+    return { username: entry.username, token: data.telegram?.apiToken ?? null }
+  } catch {
+    return { username: entry.username, token: null }
+  }
+}
+
+/** Replaces the password; the caller has verified the user (old password or a Telegram confirmation). */
+export function setPassword(username: string, password: string): AuthResult {
+  if (!password || password.length < 4) return { ok: false, error: 'password_too_short' }
+  const entries = readIndex()
+  const entry = entries.find((u) => u.username.toLowerCase() === username.trim().toLowerCase())
+  if (!entry) return { ok: false, error: 'user_not_found' }
+  entry.salt = randomBytes(16).toString('hex')
+  entry.passwordHash = hashPassword(password, entry.salt)
+  writeIndex(entries)
+  return { ok: true, username: entry.username }
+}
+
+export function changePassword(username: string, oldPassword: string, newPassword: string): AuthResult {
+  const check = loginUser(username, oldPassword)
+  if (!check.ok) return check
+  return setPassword(username, newPassword)
+}
+
 /** Used only for a previously-remembered session — intentionally skips the password check. */
 export function autoLoginUser(username: string): AuthResult {
   const entries = readIndex()

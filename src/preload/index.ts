@@ -4,6 +4,10 @@ import type {
   AiExtractResult,
   AiStatus,
   AuthResult,
+  TelegramAuthPoll,
+  TelegramAuthStart,
+  TelegramRecoverPoll,
+  TelegramRecoverStart,
   PickedFile,
   CryptoPrices,
   ExchangeRates,
@@ -25,7 +29,18 @@ const api = {
     getRememberedUsername: (): Promise<string | null> =>
       ipcRenderer.invoke('auth:getRememberedUsername'),
     setRememberedUsername: (username: string | null): Promise<boolean> =>
-      ipcRenderer.invoke('auth:setRememberedUsername', username)
+      ipcRenderer.invoke('auth:setRememberedUsername', username),
+    /** Sign in or reset the password with a confirmation in the linked Telegram chat. */
+    telegramStart: (username: string, purpose: 'login' | 'reset'): Promise<TelegramAuthStart> =>
+      ipcRenderer.invoke('auth:telegramStart', username, purpose),
+    telegramPoll: (id: string): Promise<TelegramAuthPoll> => ipcRenderer.invoke('auth:telegramPoll', id),
+    /** Forgot the login too: a code to send to the bot, then the account Telegram vouches for. */
+    recoverStart: (): Promise<TelegramRecoverStart> => ipcRenderer.invoke('auth:recoverStart'),
+    recoverPoll: (id: string): Promise<TelegramRecoverPoll> => ipcRenderer.invoke('auth:recoverPoll', id),
+    resetPassword: (username: string, password: string): Promise<AuthResult> =>
+      ipcRenderer.invoke('auth:resetPassword', username, password),
+    changePassword: (username: string, oldPassword: string, newPassword: string): Promise<AuthResult> =>
+      ipcRenderer.invoke('auth:changePassword', username, oldPassword, newPassword)
   },
   data: {
     load: (username: string): Promise<UserData> => ipcRenderer.invoke('data:load', username),

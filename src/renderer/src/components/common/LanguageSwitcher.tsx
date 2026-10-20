@@ -3,6 +3,7 @@ import { useLanguageStore } from '../../state/useLanguageStore'
 import { LANGUAGE_CODES, LANGUAGE_LABELS } from '../../lib/i18n'
 import { useT } from '../../lib/i18n/useT'
 import { useClickOutside } from '../../lib/useClickOutside'
+import LanguageFlag from './LanguageFlag'
 import './LanguageSwitcher.css'
 
 export default function LanguageSwitcher(): JSX.Element {
@@ -20,6 +21,7 @@ export default function LanguageSwitcher(): JSX.Element {
         onClick={() => setOpen((v) => !v)}
         title={t('language.switchTooltip')}
       >
+        <LanguageFlag code={language} />
         {language.toUpperCase()}
       </button>
       {open && (
@@ -34,6 +36,7 @@ export default function LanguageSwitcher(): JSX.Element {
                 setOpen(false)
               }}
             >
+              <LanguageFlag code={code} />
               {LANGUAGE_LABELS[code]}
             </button>
           ))}

@@ -19,7 +19,8 @@ export const DEFAULT_PARAMS: Record<string, TaxParams> = {
     minimumWage: 4806,
     zusFullBase: 5652,
     zusPreferentialBase: 1441.8,
-    healthMin: 324.41,
+    // 9% of the minimum wage, from February; January still uses the previous year's amount.
+    healthMin: 432.54,
     healthRyczalt: [498.35, 830.58, 1495.04],
     liniowyHealthDeductionLimit: 14100
   }
@@ -158,7 +159,9 @@ export function yearTax(tax: FirmTax, year: number, months: MonthFigures[], upTo
     const f = months[m - 1] ?? { revenue: 0, costs: 0, income: 0, vatOut: 0, vatIn: 0 }
     ytdRevenue += f.revenue
     ytdIncome += f.income
-    const health = healthContribution(tax, params, f.income, ytdRevenue)
+    // The health-contribution year runs February–January: January still uses last year's minimum.
+    const healthParams = m === 1 ? { ...params, healthMin: paramsFor(tax, year - 1).healthMin } : params
+    const health = healthContribution(tax, healthParams, f.income, ytdRevenue)
     ytdSocial += zus.social
     ytdHealth += health
     let base: number

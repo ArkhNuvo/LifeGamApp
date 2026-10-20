@@ -325,6 +325,51 @@ export interface FirmTax {
   vatPeriod: 'month' | 'quarter'
   /** Per-year overrides of the default parameters, keyed by year ("2026"). */
   params: Record<string, Partial<TaxParams>>
+  /** Accident insurance rate in percent (1.67 for payers with up to 9 insured). */
+  accidentRate?: number
+}
+
+/** UoP = employment contract, zlecenie / dzieło = civil-law contracts, b2b = a contractor invoicing the firm. */
+export type ContractType = 'uop' | 'zlecenie' | 'dzielo' | 'b2b'
+
+export interface StaffMember {
+  id: string
+  firstName: string
+  lastName: string
+  pesel: string
+  /** Contractors (B2B): their business name and NIP. */
+  company?: string
+  nip?: string
+  position: string
+  contract: ContractType
+  startDate: string
+  endDate: string | null
+  /** 'monthly' gross pay (net invoice for B2B), 'hourly' rate × hours a month, 'once' a one-off amount paid on payDate (dzieło). */
+  payType: 'monthly' | 'hourly' | 'once'
+  rate: number
+  hours: number
+  payDate: string | null
+  /** Part of a full-time job for UoP: 1, 0.5, 0.25… */
+  fte: number
+  /** PIT exemption for people under 26 (UoP, zlecenie), applied automatically while the PESEL says they are under 26. */
+  youthRelief: boolean
+  /** Zlecenie: a pupil / student under 26 — no ZUS at all. */
+  student: boolean
+  /** PIT-2 filed: the monthly tax-reducing amount is applied. */
+  pit2: boolean
+  /** UoP: commutes from another town — higher deductible costs. */
+  commuting: boolean
+  /** Zlecenie: voluntary sickness insurance. */
+  sickness: boolean
+  /** Zlecenie: already insured elsewhere (e.g. a job paying at least the minimum wage) — only the health contribution is due. */
+  otherTitle: boolean
+  /** Zlecenie / dzieło with a transfer of copyright: 50% deductible costs. */
+  copyright: boolean
+  /** Enrolled in PPK (employee 2%, employer 1.5%). */
+  ppk: boolean
+  /** B2B: VAT rate on the contractor's invoices (null = not a VAT payer). */
+  vatRate: number | null
+  note: string
 }
 
 export interface Firm extends FinanceBook {
@@ -335,6 +380,8 @@ export interface Firm extends FinanceBook {
   logo: string | null
   tax: FirmTax
   createdAt: string
+  /** Employees and contractors of the firm. */
+  staff?: StaffMember[]
 }
 
 /** KPiR columns a document line can be booked in; '-' = not a KPiR entry (the owner's own ZUS, PIT, VAT payments). */
@@ -519,6 +566,8 @@ export interface TelegramCatalogPayload {
   checkingCategories: TelegramCatalogCheckingCategory[]
   /** Accounts a payment sent from the bot can go to (crypto portfolios excluded). */
   financeAccounts: TelegramFinanceAccount[]
+  /** Personal finances and each firm, with their accounts, so the bot can file a payment to the right book. */
+  financeBooks: TelegramFinanceBook[]
   /** Not-done cards in a TODO/PLANNED column this month — "what's left to do". */
   plannedCards: TelegramCatalogCard[]
   /** Cards marked done today — "what got done today". */
@@ -599,6 +648,16 @@ export interface TelegramFinanceAddPayload {
   /** Said in the bot message ("cash", "card", "*1234"); the app picks the account from it when no account was chosen. */
   paymentMethod?: 'card' | 'cash' | null
   cardLast4?: string | null
+  /** 'personal' (default) or the id of the firm the payment belongs to. */
+  bookId?: string
+}
+
+export interface TelegramFinanceBook {
+  /** 'personal' or the firm id. */
+  id: string
+  kind: 'personal' | 'firm'
+  name: string
+  accounts: TelegramFinanceAccount[]
 }
 
 /** Accounts the bot may offer for a payment. */
@@ -625,6 +684,20 @@ export interface AuthResult {
   error?: string
   username?: string
 }
+
+/** Signing in / resetting the password with a confirmation in Telegram. */
+export type TelegramAuthStart = { ok: true; id: string } | { ok: false; error: 'user_not_found' | 'not_linked' | 'network' }
+export type TelegramAuthPoll =
+  | { status: 'pending' | 'denied' | 'expired' | 'network' }
+  | { status: 'approved'; purpose: 'login' | 'reset'; username: string }
+
+/** Recovering an account whose login and password are both forgotten: a code sent to the bot from Telegram. */
+export type TelegramRecoverStart = { ok: true; id: string; code: string; bot: string } | { ok: false; error: 'network' }
+export type TelegramRecoverPoll =
+  | { status: 'pending' | 'expired' | 'network' | 'mismatch' }
+  | { status: 'approved'; username: string }
+  /** Telegram knows the account, but it isn't on this computer. */
+  | { status: 'no_local'; username: string }
 
 export type UpdateStatus =
   | { state: 'checking' }

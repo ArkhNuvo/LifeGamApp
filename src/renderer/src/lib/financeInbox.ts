@@ -7,7 +7,42 @@ import { prepareForAi } from './documents'
 import { newId } from './ids'
 import { addEvent, listAccounts } from './ledger'
 import { pickPaymentAccount } from './paymentAccount'
-import type { AiExtraction, Attachment, CurrencyCode, TelegramFinanceAddPayload } from './types'
+import { bookOf } from './book'
+import type { AiExtraction, Attachment, CurrencyCode, FinanceBook, KpirColumn, LedgerDocument, LedgerItem, TelegramFinanceAddPayload, UserData } from './types'
+
+/** The book a bot payment belongs to: a firm when it still exists, personal finances otherwise. */
+function targetBook(data: UserData, bookId: string | undefined): { book: FinanceBook; firm: boolean } {
+  const firm = bookId && bookId !== 'personal' ? bookOf(data, bookId) : undefined
+  return firm ? { book: firm, firm: true } : { book: data, firm: false }
+}
+
+const KPIR = ['7', '8', '10', '11', '12', '13', '16', '-']
+
+/** Invoice lines and document details read by the AI, for a firm's KPiR. */
+function documentParts(d: AiExtraction): { items: LedgerItem[]; doc: LedgerDocument | null } {
+  const r2 = (n: number): number => Math.round(n * 100) / 100
+  const items = d.items
+    .filter((it) => it.net !== null || it.gross !== null)
+    .map((it): LedgerItem => {
+      const rate = it.vatRate ?? 0
+      const net = it.net ?? r2((it.gross ?? 0) / (1 + rate / 100))
+      const gross = it.gross ?? r2(net * (1 + rate / 100))
+      return {
+        id: newId(),
+        description: it.description,
+        net,
+        vatRate: it.vatRate,
+        vat: r2(gross - net),
+        gross,
+        kpir: KPIR.includes(it.kpirColumn ?? '') ? (it.kpirColumn as KpirColumn) : null
+      }
+    })
+  const doc =
+    d.documentNumber || d.counterpartyName || d.counterpartyNip
+      ? { number: d.documentNumber ?? '', counterpartyName: d.counterpartyName ?? undefined, counterpartyNip: d.counterpartyNip ?? undefined }
+      : null
+  return { items, doc }
+}
 
 const LANGUAGE_NAMES: Record<string, string> = {
   ru: 'Russian',
@@ -27,8 +62,9 @@ export async function applyFinanceAdd(apiToken: string, payload: TelegramFinance
   const store = useAppStore.getState()
   const data = store.data
   if (!data) throw new Error('no data loaded')
+  const { book, firm } = targetBook(data, payload.bookId)
   // A re-delivered action (the ack failed last time) must not create a second event.
-  if (data.ledger.events.some((e) => e.id === payload.id)) return
+  if (book.ledger.events.some((e) => e.id === payload.id)) return
 
   let attachment: Attachment | null = null
   let extraction: AiExtraction | null = null
@@ -37,7 +73,8 @@ export async function applyFinanceAdd(apiToken: string, payload: TelegramFinance
     if (file && store.username) {
       const path = await window.api.attachments.save(store.username, file.mime, file.dataBase64)
       attachment = { id: newId(), name: payload.fileName ?? file.name, mime: file.mime, path }
-      const needsReading = payload.amount === null || !payload.title
+      // A firm's document is always read: its lines go to the KPiR.
+      const needsReading = payload.amount === null || !payload.title || firm
       if (needsReading && (await window.api.ai.status()).hasKey) {
         try {
           const prepared = await prepareForAi(file.mime, file.dataBase64)
@@ -46,8 +83,9 @@ export async function applyFinanceAdd(apiToken: string, payload: TelegramFinance
             mime: prepared.mime,
             language: LANGUAGE_NAMES[useLanguageStore.getState().language] ?? 'English',
             today: todayISO(),
-            categories: [...new Set(data.ledger.events.map((e) => e.category).filter(Boolean))],
-            counterparties: data.ledger.counterparties.map((c) => c.name)
+            categories: [...new Set(book.ledger.events.map((e) => e.category).filter(Boolean))],
+            counterparties: book.ledger.counterparties.map((c) => c.name),
+            business: firm
           })
           if (result.ok) extraction = result.data
         } catch {
@@ -78,7 +116,10 @@ export async function applyFinanceAdd(apiToken: string, payload: TelegramFinance
   const title = payload.title || extraction?.description || extraction?.merchant || ''
   const category = payload.category || extraction?.category || ''
 
-  useAppStore.getState().updateData((draft) => {
+  const parts = firm && extraction ? documentParts(extraction) : null
+
+  useAppStore.getState().updateData((root) => {
+    const draft = targetBook(root, payload.bookId).book
     if (draft.ledger.events.some((e) => e.id === payload.id)) return
     const all = listAccounts(draft, '')
     // An account picked in the bot wins; otherwise the way it was paid decides (card binding, default card / cash, coin).
@@ -86,7 +127,7 @@ export async function applyFinanceAdd(apiToken: string, payload: TelegramFinance
     const account =
       chosen ??
       pickPaymentAccount(
-        draft.settings,
+        root.settings,
         all,
         {
           paymentMethod: coin ? 'crypto' : (payload.paymentMethod ?? extraction?.paymentMethod),
@@ -117,7 +158,8 @@ export async function applyFinanceAdd(apiToken: string, payload: TelegramFinance
       confirmed: known && date <= todayISO(),
       attachments: attachment ? [attachment] : [],
       review: known ? null : 'document',
-      crypto: coin && account.crypto ? coin : null
+      crypto: coin && account.crypto ? coin : null,
+      ...(parts ? { items: parts.items, doc: parts.doc } : {})
     })
     ev.id = payload.id
   })

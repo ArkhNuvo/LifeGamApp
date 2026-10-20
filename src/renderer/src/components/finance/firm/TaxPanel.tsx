@@ -4,6 +4,7 @@ import { PIT, VAT_EXEMPTION_LIMIT, dueDate } from '../../../lib/polishTax'
 import type { Firm } from '../../../lib/types'
 import TaxSettingsModal from './TaxSettingsModal'
 import { useFirmYear } from './useFirmYear'
+import { useFirmPayroll } from './usePayroll'
 
 const pln = (n: number): string => `${n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`
 const ddmm = (iso: string): string => iso.slice(5).split('-').reverse().join('.')
@@ -40,6 +41,7 @@ export default function TaxPanel({ firm, month }: { firm: Firm; month: string })
   const F = useFirmLabel()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const { year, current, taxes, monthIndex } = useFirmYear(firm, month)
+  const { totals: staff } = useFirmPayroll(firm, month)
   if (!current) return <></>
   const zusTotal = current.social.total + current.health
   // Quarterly VAT accumulates over the quarter and is due on the 25th after it ends.
@@ -90,6 +92,22 @@ export default function TaxPanel({ firm, month }: { firm: Firm; month: string })
         <Row label={F('tax.income')} value={pln(current.ytdIncome)} />
         {firm.tax.form === 'skala' && <Meter label={F('tax.threshold')} used={Math.max(0, current.ytdBase)} limit={PIT.skalaThreshold} />}
         {!firm.tax.vatPayer && <Meter label={F('tax.vatLimit')} used={current.ytdRevenue} limit={vatLimit} />}
+      </div>
+      {(staff.cost > 0 || staff.b2b > 0) && (
+        <div className="tax-card">
+          <div className="fin-tile-label">{F('tax.staffTitle', { month })}</div>
+          {staff.zus > 0 && <Row label={F('tax.staffZus', { date: ddmm(dueDate(current.month, 20)) })} value={pln(staff.zus)} />}
+          {staff.pit > 0 && <Row label={F('tax.staffPit', { date: ddmm(dueDate(current.month, 20)) })} value={pln(staff.pit)} />}
+          {staff.net > 0 && <Row label={F('tax.staffNet')} value={pln(staff.net)} />}
+          {staff.b2b > 0 && <Row label={F('tax.staffB2b')} value={pln(staff.b2b)} />}
+        </div>
+      )}
+      <div className="tax-card">
+        <Row
+          label={F('tax.totalDue')}
+          value={pln(zusTotal + current.pitAdvance + staff.zus + staff.pit + (firm.tax.vatPayer && vatDue > 0 && (firm.tax.vatPeriod === 'month' || monthIndex % 3 === 0) ? vatDue : 0))}
+          strong
+        />
       </div>
       <div className="fin-widget-note">{F('tax.estimate')}</div>
 

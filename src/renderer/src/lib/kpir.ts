@@ -26,10 +26,20 @@ export function defaultColumn(type: LedgerEvent['type'], ev?: Pick<LedgerEvent, 
 
 type BookColumn = Exclude<KpirColumn, '-'>
 
+/** The date an event is booked under: its "data księgowania", or the event date. */
+export const bookingDate = (ev: Pick<LedgerEvent, 'date' | 'bookingDate'>): string => ev.bookingDate || ev.date
+
+/** A line kept out of the KPiR as not tax-deductible (NKUP) — the whole document or the line itself. */
+export const isNkup = (ev: Pick<LedgerEvent, 'type' | 'nkup'>, item: LedgerItem): boolean =>
+  ev.type === 'expense' && (!!ev.nkup || !!item.nkup)
+
 export interface KpirRow {
   lp: number
   eventId: string
+  /** Booking date (column 2). */
   date: string
+  /** The event's own date, when it is booked under another one. */
+  eventDate: string | null
   docNumber: string
   counterparty: string
   address: string
@@ -40,6 +50,8 @@ export interface KpirRow {
   /** Column 14: 12 + 13. */
   expenses: number
   vat: number
+  /** NKUP lines of the document (gross or net as booked) — not in the columns. */
+  nkup: number
   /** The event has no lines of its own — it was booked in its default column. */
   defaulted: boolean
   /** Nothing of it goes into the book (e.g. the owner's ZUS payment). */
@@ -71,7 +83,9 @@ export function bookedItems(ev: LedgerEvent): { items: LedgerItem[]; defaulted: 
 
 /** Events that belong in the book: confirmed income and expenses (transfers between own accounts don't). */
 export function bookable(events: LedgerEvent[]): LedgerEvent[] {
-  return events.filter((e) => e.confirmed && e.type !== 'transfer').sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
+  return events
+    .filter((e) => e.confirmed && e.type !== 'transfer')
+    .sort((a, b) => bookingDate(a).localeCompare(bookingDate(b)) || a.id.localeCompare(b.id))
 }
 
 /** KPiR rows for one year, numbered from 1 in date order. */
@@ -81,27 +95,33 @@ export function kpirRows(ctx: KpirContext, events: LedgerEvent[], year: string):
     .map((r, i) => ({ ...r, lp: i + 1 }))
 }
 
-function allRows(ctx: KpirContext, events: LedgerEvent[], year: string): KpirRow[] {
+/** Every bookable event of the year as a row, including those that stay out of the book (owner's ZUS, NKUP). */
+export function allRows(ctx: KpirContext, events: LedgerEvent[], year: string): KpirRow[] {
   return bookable(events)
-    .filter((e) => e.date.startsWith(year))
+    .filter((e) => bookingDate(e).startsWith(year))
     .map((ev, i): KpirRow => {
       const { items, defaulted } = bookedItems(ev)
       const cols = emptyCols()
       let vat = 0
+      let nkup = 0
       for (const item of items) {
         // A VAT payer books net amounts; everyone else the gross ones.
         const amount = toPln(ctx, ctx.vatPayer && !defaulted ? item.net : item.gross, ev.accountId)
         const column = item.kpir ?? defaultColumn(ev.type, ev)
         if (column === '-') continue
-        cols[column] += amount
+        // VAT doesn't depend on the PIT treatment: an NKUP purchase keeps its VAT.
         vat += toPln(ctx, item.vat, ev.accountId)
+        if (isNkup(ev, item)) nkup += amount
+        else cols[column] += amount
       }
       for (const k of Object.keys(cols) as BookColumn[]) cols[k] = r2(cols[k])
+      const booked = bookingDate(ev)
       return {
         lp: i + 1,
-        outside: items.every((it) => (it.kpir ?? defaultColumn(ev.type, ev)) === '-'),
+        outside: items.every((it) => (it.kpir ?? defaultColumn(ev.type, ev)) === '-' || isNkup(ev, it)),
         eventId: ev.id,
-        date: ev.date,
+        date: booked,
+        eventDate: booked !== ev.date ? ev.date : null,
         docNumber: ev.doc?.number ?? '',
         counterparty: ev.doc?.counterpartyName ?? '',
         address: [ev.doc?.counterpartyNip ? `NIP ${ev.doc.counterpartyNip}` : '', ev.doc?.counterpartyAddress ?? ''].filter(Boolean).join(', '),
@@ -110,6 +130,7 @@ function allRows(ctx: KpirContext, events: LedgerEvent[], year: string): KpirRow
         revenue: r2(cols['7'] + cols['8']),
         expenses: r2(cols['12'] + cols['13']),
         vat: r2(vat),
+        nkup: r2(nkup),
         defaulted
       }
     })
@@ -135,7 +156,8 @@ export function allCosts(t: KpirTotals): number {
 
 /** Revenue, costs, income and VAT of each month of the year — the input of the tax calculation. */
 export function monthFigures(ctx: KpirContext, events: LedgerEvent[], year: string): MonthFigures[] {
-  const rows = kpirRows(ctx, events, year)
+  // Rows outside the book have no columns but may carry VAT (an NKUP purchase).
+  const rows = allRows(ctx, events, year)
   const out: MonthFigures[] = Array.from({ length: 12 }, () => ({ revenue: 0, costs: 0, income: 0, vatOut: 0, vatIn: 0 }))
   const typeOf = new Map(events.map((e) => [e.id, e.type]))
   for (const r of rows) {
@@ -223,7 +245,9 @@ export interface RzisReport {
 export function rzis(ctx: KpirContext, events: LedgerEvent[], from: string, to: string, incomeTax: number): RzisReport {
   const lines = Object.fromEntries(RZIS_LINES.map((l) => [l.id, 0])) as Record<RzisLine, number>
   for (const ev of bookable(events)) {
-    if (ev.date < from || ev.date > to) continue
+    const booked = bookingDate(ev)
+    if (booked < from || booked > to) continue
+    // NKUP lines stay in: they are costs of the business, only not deductible for PIT.
     const { items, defaulted } = bookedItems(ev)
     for (const item of items) {
       if ((item.kpir ?? defaultColumn(ev.type, ev)) === '-') continue
@@ -242,5 +266,5 @@ export function rzis(ctx: KpirContext, events: LedgerEvent[], from: string, to: 
 }
 
 export function firmMonthsOfYear(firm: Firm, year: string): string[] {
-  return [...new Set(firm.ledger.events.filter((e) => e.date.startsWith(year)).map((e) => monthOf(e.date)))].sort()
+  return [...new Set(firm.ledger.events.map(bookingDate).filter((d) => d.startsWith(year)).map(monthOf))].sort()
 }

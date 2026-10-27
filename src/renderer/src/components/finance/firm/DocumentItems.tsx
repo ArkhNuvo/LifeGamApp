@@ -26,6 +26,8 @@ export function itemsTotal(items: LedgerItem[]): { net: number; vat: number; gro
 
 interface Props {
   type: LedgerEventType
+  /** The whole document is NKUP — the per-line switch is hidden. */
+  nkupAll?: boolean
   doc: LedgerDocument
   onDoc: (doc: LedgerDocument) => void
   items: LedgerItem[]
@@ -37,11 +39,12 @@ interface Props {
 }
 
 /** Firm events: the document's details and its lines, each booked in a KPiR column. */
-export default function DocumentItems({ type, doc, onDoc, items, onItems, amount, currency, onUseTotal }: Props): JSX.Element {
+export default function DocumentItems({ type, nkupAll, doc, onDoc, items, onItems, amount, currency, onUseTotal }: Props): JSX.Element {
   const F = useFirmLabel()
   const total = itemsTotal(items)
   const fallback = defaultColumn(type)
   const mismatch = items.length > 0 && Math.abs(total.gross - amount) > 0.009
+  const lineNkup = type === 'expense' && !nkupAll
 
   function patch(id: string, change: Partial<LedgerItem>, recalc?: 'net' | 'gross' | 'rate'): void {
     onItems(items.map((it) => (it.id === id ? (recalc ? recalcItem({ ...it, ...change }, recalc) : { ...it, ...change }) : it)))
@@ -93,13 +96,14 @@ export default function DocumentItems({ type, doc, onDoc, items, onItems, amount
       </div>
       {items.length === 0 && <div className="field-hint">{F('ev.itemsHint', { col: fallback })}</div>}
       {items.length > 0 && (
-        <div className="firm-items">
+        <div className={`firm-items${lineNkup ? ' firm-items--nkup' : ''}`}>
           <div className="firm-item firm-item--head">
             <span>{F('ev.itemDesc')}</span>
             <span>{F('ev.net')}</span>
             <span>{F('ev.vatRate')}</span>
             <span>{F('ev.gross')}</span>
             <span>{F('ev.column')}</span>
+            {lineNkup && <span title={F('ev.nkupHint')}>NKUP</span>}
             <span />
           </div>
           {items.map((it) => (
@@ -126,6 +130,15 @@ export default function DocumentItems({ type, doc, onDoc, items, onItems, amount
                 ))}
                 <option value="-">— {F('ev.notInBook')}</option>
               </select>
+              {lineNkup && (
+                <input
+                  type="checkbox"
+                  className="firm-item-nkup"
+                  checked={!!it.nkup}
+                  title={F('ev.nkupLine')}
+                  onChange={(e) => patch(it.id, { nkup: e.target.checked || undefined })}
+                />
+              )}
               <button type="button" className="icon-btn" onClick={() => onItems(items.filter((x) => x.id !== it.id))}>
                 ✕
               </button>

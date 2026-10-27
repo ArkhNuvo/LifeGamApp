@@ -236,6 +236,10 @@ export interface LedgerEvent {
   doc?: LedgerDocument | null
   /** A payment made in a coin: `amount` stays the USD equivalent, this holds the coin amount that moved the portfolio. */
   crypto?: { ticker: string; amount: number } | null
+  /** Firm books: "data księgowania" — the date the event is booked under (KPiR, taxes, VAT, RZiS) when it differs from `date`. */
+  bookingDate?: string | null
+  /** Firm books: the whole document is "nie stanowi kosztu uzyskania przychodu" — kept out of the KPiR and the tax base. */
+  nkup?: boolean
 }
 
 /** A recurring payment template; its occurrences are materialised as planned events. */
@@ -442,6 +446,8 @@ export interface LedgerItem {
   kpir: KpirColumn | null
   /** Optional override of the profit-and-loss line (RZiS) the line is reported in. */
   rzis?: string | null
+  /** Not a tax-deductible cost (NKUP): left out of the KPiR and the tax base, still a cost in the RZiS. */
+  nkup?: boolean
 }
 
 /** Accounting details of the document behind an event (firm books). */

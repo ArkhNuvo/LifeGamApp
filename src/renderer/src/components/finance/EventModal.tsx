@@ -33,6 +33,7 @@ import type {
 } from '../../lib/types'
 import AiSettingsModal from './AiSettingsModal'
 import DocumentItems, { recalcItem } from './firm/DocumentItems'
+import { useFirmLabel } from '../../lib/firmLabels'
 import FilePreviewModal from './FilePreviewModal'
 import FileViewer from './FileViewer'
 import { useAccounts } from './useFinance'
@@ -123,8 +124,11 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
   const [recurrence, setRecurrence] = useState<Recurrence | ''>('')
   // Firm books: the document's details and its lines booked in KPiR columns.
   const firm = useFirm()
+  const F = useFirmLabel()
   const [doc, setDoc] = useState<LedgerDocument>(initial?.doc ?? { number: '' })
   const [items, setItems] = useState<LedgerItem[]>(initial?.items ?? [])
+  const [bookingDate, setBookingDate] = useState(initial?.bookingDate ?? '')
+  const [nkup, setNkup] = useState(!!initial?.nkup)
   const [newCpName, setNewCpName] = useState<string | null>(null)
   const [newCpKind, setNewCpKind] = useState<CounterpartyKind>('service')
 
@@ -449,7 +453,12 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
       review: null,
       crypto: isCrypto ? { ticker: tickerSym, amount: cryptoQtyValue } : null,
       ...(firm && type !== 'transfer'
-        ? { items: items.filter((it) => it.net !== 0 || it.gross !== 0 || it.description.trim()), doc: doc.number || doc.counterpartyName || doc.counterpartyNip || doc.ksef || doc.counterpartyAddress ? doc : null }
+        ? {
+            items: items.filter((it) => it.net !== 0 || it.gross !== 0 || it.description.trim()),
+            doc: doc.number || doc.counterpartyName || doc.counterpartyNip || doc.ksef || doc.counterpartyAddress ? doc : null,
+            bookingDate: bookingDate && bookingDate !== date ? bookingDate : null,
+            nkup: type === 'expense' && nkup
+          }
         : {})
     }
     updateData((draft, root) => {
@@ -810,8 +819,28 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
         </div>
 
         {firm && type !== 'transfer' && (
+          <div className="fin-row firm-booking">
+            <div className="form-field">
+              <label>{F('ev.bookingDate')}</label>
+              <input type="date" value={bookingDate || date} onChange={(e) => setBookingDate(e.target.value === date ? '' : e.target.value)} />
+              <div className="field-hint">
+                {bookingDate && bookingDate !== date ? F('ev.bookingDateOther', { month: bookingDate.slice(0, 7) }) : F('ev.bookingDateHint')}
+              </div>
+            </div>
+            {type === 'expense' && (
+              <label className="fin-keep-balances firm-nkup" title={F('ev.nkupHint')}>
+                <input type="checkbox" checked={nkup} onChange={(e) => setNkup(e.target.checked)} />
+                {F('ev.nkup')}
+              </label>
+            )}
+          </div>
+        )}
+        {firm && type === 'expense' && nkup && <div className="field-hint">{F('ev.nkupHint')}</div>}
+
+        {firm && type !== 'transfer' && (
           <DocumentItems
             type={type}
+            nkupAll={type === 'expense' && nkup}
             doc={doc}
             onDoc={setDoc}
             items={items}

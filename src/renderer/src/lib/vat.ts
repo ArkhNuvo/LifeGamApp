@@ -1,5 +1,5 @@
 import { convert } from './currency'
-import { defaultColumn, type KpirContext } from './kpir'
+import { bookingDate, defaultColumn, type KpirContext } from './kpir'
 import type { CurrencyCode, LedgerEvent } from './types'
 
 const r2 = (n: number): number => Math.round(n * 100) / 100
@@ -55,8 +55,8 @@ export function vatRegister(ctx: KpirContext, events: LedgerEvent[], from: strin
   const purchaseRates = new Map<string, VatByRate>()
   let missing = 0
   const inPeriod = events
-    .filter((e) => e.confirmed && e.type !== 'transfer' && e.date >= from && e.date <= to)
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .filter((e) => e.confirmed && e.type !== 'transfer' && bookingDate(e) >= from && bookingDate(e) <= to)
+    .sort((a, b) => bookingDate(a).localeCompare(bookingDate(b)))
   for (const ev of inPeriod) {
     const lines = (ev.items ?? []).filter((it) => it.kpir !== '-')
     if (lines.length === 0) {
@@ -81,7 +81,7 @@ export function vatRegister(ctx: KpirContext, events: LedgerEvent[], from: strin
     }
     target.push({
       eventId: ev.id,
-      date: ev.date,
+      date: bookingDate(ev),
       docNumber: ev.doc?.number ?? '',
       counterparty: ev.doc?.counterpartyName ?? ev.title,
       nip: ev.doc?.counterpartyNip ?? '',

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { useBookSelect, useUpdateBook } from '../../lib/book'
 import { useRatesStore } from '../../state/useRatesStore'
 import { useT } from '../../lib/i18n/useT'
+import { useFirmLabel } from '../../lib/firmLabels'
 import { counterpartyName, deleteEvent, monthOf, setEventConfirmed, summarizeMonth } from '../../lib/ledger'
 import type { Attachment, LedgerEvent } from '../../lib/types'
 import FilePreviewModal from './FilePreviewModal'
@@ -32,6 +33,7 @@ interface Props {
 
 export default function EventsTab({ month, onEdit }: Props): JSX.Element {
   const t = useT()
+  const F = useFirmLabel()
   const updateData = useUpdateBook()
   const events = useBookSelect((b) => b?.ledger.events ?? [])
   const counterparties = useBookSelect((b) => b?.ledger.counterparties ?? [])
@@ -151,6 +153,16 @@ export default function EventsTab({ month, onEdit }: Props): JSX.Element {
                       </span>
                     )}
                     {!ev.confirmed && <span className="fin-planned-badge">{t('fin.planned')}</span>}
+                    {ev.type === 'expense' && (ev.nkup || ev.items?.some((it) => it.nkup)) && (
+                      <span className="fin-planned-badge fin-nkup-badge" title={F('ev.nkupHint')}>
+                        NKUP
+                      </span>
+                    )}
+                    {ev.bookingDate && ev.bookingDate !== ev.date && (
+                      <span className="fin-planned-badge" title={F('ev.bookingDate')}>
+                        {F('kpir.bookedShort', { date: ev.bookingDate.split('-').reverse().join('.') })}
+                      </span>
+                    )}
                   </div>
                   <div className="fin-event-meta">{meta}</div>
                 </div>

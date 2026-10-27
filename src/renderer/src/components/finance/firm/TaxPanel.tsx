@@ -9,11 +9,36 @@ import { useFirmPayroll } from './usePayroll'
 const pln = (n: number): string => `${n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`
 const ddmm = (iso: string): string => iso.slice(5).split('-').reverse().join('.')
 
-function Row({ label, value, strong, hint }: { label: string; value: string; strong?: boolean; hint?: string }): JSX.Element {
+type Detail = [label: string, value: string, sub?: boolean]
+
+/** One figure of the panel; `details` open in a popup on hover with what the figure is made of. */
+function Row({
+  label,
+  value,
+  strong,
+  hint,
+  details
+}: {
+  label: string
+  value: string
+  strong?: boolean
+  hint?: string
+  details?: Detail[]
+}): JSX.Element {
   return (
-    <div className={`tax-row${strong ? ' tax-row--strong' : ''}`} title={hint}>
+    <div className={`tax-row${strong ? ' tax-row--strong' : ''}${details ? ' tax-row--details' : ''}`} title={hint} tabIndex={details ? 0 : undefined}>
       <span>{label}</span>
       <span className="tax-value">{value}</span>
+      {details && (
+        <div className="tax-pop" role="tooltip">
+          {details.map(([l, v, sub], i) => (
+            <div key={i} className={`tax-pop-row${sub ? ' tax-pop-row--sub' : ''}`}>
+              <span>{l}</span>
+              <span className="tax-value">{v}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -41,9 +66,39 @@ export default function TaxPanel({ firm, month }: { firm: Firm; month: string })
   const F = useFirmLabel()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const { year, current, taxes, monthIndex } = useFirmYear(firm, month)
-  const { totals: staff } = useFirmPayroll(firm, month)
+  const { totals: staff, slips } = useFirmPayroll(firm, month)
   if (!current) return <></>
   const zusTotal = current.social.total + current.health
+  const zusDate = ddmm(dueDate(current.month, 20))
+  const s = current.social
+  const ownerDetails: Detail[] = [
+    ...(s.total > 0
+      ? ([
+          [F('tax.social'), pln(s.social)],
+          ['Emerytalna', pln(s.pension), true],
+          ['Rentowa', pln(s.disability), true],
+          ...(s.sickness > 0 ? [['Chorobowa', pln(s.sickness), true] as Detail] : []),
+          ['Wypadkowa', pln(s.accident), true]
+        ] as Detail[])
+      : []),
+    ...(s.labourFund > 0 ? [['Fundusz Pracy + FS', pln(s.labourFund)] as Detail] : []),
+    [F('tax.health'), pln(current.health)],
+    [F('tax.healthBase'), pln(current.healthBase), true]
+  ]
+  const people = slips.filter((p) => p.zus > 0)
+  const staffDetails: Detail[] = [
+    ...people.map((p): Detail => [`${p.member.firstName} ${p.member.lastName}`.trim() || p.member.company || '—', pln(p.zus)]),
+    [F('tax.staffEeZus'), pln(staff.eeZus), true],
+    [F('tax.staffErZus'), pln(staff.erZus), true]
+  ]
+  const staffAllDetails: Detail[] = [
+    [F('tax.staffNet'), pln(staff.net)],
+    [F('tax.zusStaff'), pln(staff.zus)],
+    ...(staff.pit > 0 ? [['PIT-4', pln(staff.pit)] as Detail] : []),
+    ...(staff.ppk > 0 ? [[F('tax.staffPpk'), pln(staff.ppk)] as Detail] : []),
+    ...(staff.deductions > 0 ? [[F('tax.staffDeductions'), pln(staff.deductions)] as Detail] : []),
+    ...(staff.b2b > 0 ? [[F('tax.staffB2b'), pln(staff.b2b)] as Detail] : [])
+  ]
   // Quarterly VAT accumulates over the quarter and is due on the 25th after it ends.
   const quarterEnd = Math.ceil(monthIndex / 3) * 3
   const vatDue =
@@ -64,10 +119,21 @@ export default function TaxPanel({ firm, month }: { firm: Firm; month: string })
       <div className="fin-hint">{F(`ts.form.${firm.tax.form}`)} · {F(`ts.zus.${firm.tax.zus}`)}</div>
 
       <div className="tax-card">
-        {current.social.total > 0 && <Row label={F('tax.social')} value={pln(current.social.social)} />}
-        {current.social.labourFund > 0 && <Row label={F('tax.labourFund')} value={pln(current.social.labourFund)} />}
-        <Row label={F('tax.health')} value={pln(current.health)} />
-        <Row label={F('tax.zusTotal', { date: ddmm(dueDate(current.month, 20)) })} value={pln(zusTotal)} strong />
+        <Row label={F('tax.zusOwner')} value={pln(zusTotal)} details={ownerDetails} />
+        {staff.zus > 0 && <Row label={F('tax.zusStaff')} value={pln(staff.zus)} details={staffDetails} />}
+        <Row
+          label={F('tax.zusTotal', { date: zusDate })}
+          value={pln(zusTotal + staff.zus)}
+          strong
+          details={
+            staff.zus > 0
+              ? [
+                  [F('tax.zusOwner'), pln(zusTotal)],
+                  [F('tax.zusStaff'), pln(staff.zus)]
+                ]
+              : undefined
+          }
+        />
       </div>
       <div className="tax-card">
         <Row label={F('tax.pit', { date: ddmm(dueDate(current.month, 20)) })} value={pln(current.pitAdvance)} strong />
@@ -96,10 +162,11 @@ export default function TaxPanel({ firm, month }: { firm: Firm; month: string })
       {(staff.cost > 0 || staff.b2b > 0) && (
         <div className="tax-card">
           <div className="fin-tile-label">{F('tax.staffTitle', { month })}</div>
-          {staff.zus > 0 && <Row label={F('tax.staffZus', { date: ddmm(dueDate(current.month, 20)) })} value={pln(staff.zus)} />}
-          {staff.pit > 0 && <Row label={F('tax.staffPit', { date: ddmm(dueDate(current.month, 20)) })} value={pln(staff.pit)} />}
+          {staff.pit > 0 && <Row label={F('tax.staffPit', { date: zusDate })} value={pln(staff.pit)} />}
+          {staff.ppk > 0 && <Row label={F('tax.staffPpk')} value={pln(staff.ppk)} />}
           {staff.net > 0 && <Row label={F('tax.staffNet')} value={pln(staff.net)} />}
           {staff.b2b > 0 && <Row label={F('tax.staffB2b')} value={pln(staff.b2b)} />}
+          <Row label={F('tax.staffAll')} value={pln(staff.cost + staff.b2b)} strong details={staffAllDetails} />
         </div>
       )}
       <div className="tax-card">

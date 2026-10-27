@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useFirmLabel } from '../../../lib/firmLabels'
-import { KPIR_COLUMNS, RZIS_LINES, allCosts, kpirRows, rzis, totals, type KpirRow, type RzisReport } from '../../../lib/kpir'
+import { KPIR_COLUMNS, RZIS_LINES, allCosts, allRows, kpirRows, rzis, totals, type KpirRow, type RzisReport } from '../../../lib/kpir'
 import { formatNip } from '../../../lib/polishTax'
 import type { Firm, LedgerEvent } from '../../../lib/types'
 import { useFirmYear } from './useFirmYear'
@@ -72,6 +72,12 @@ export default function KpirTab({ firm, month, onEdit }: Props): JSX.Element {
 
   const yearRows = useMemo(() => kpirRows(ctx, firm.ledger.events, month.slice(0, 4)), [ctx, firm.ledger.events, month])
   const rows = yearRows.filter((r) => r.date.startsWith(month))
+  // Expenses kept out of the book as not tax-deductible, listed under it.
+  const nkupRows = useMemo(
+    () => allRows(ctx, firm.ledger.events, month.slice(0, 4)).filter((r) => r.date.startsWith(month) && r.nkup > 0),
+    [ctx, firm.ledger.events, month]
+  )
+  const nkupTotal = nkupRows.reduce((s, r) => s + r.nkup, 0)
   const before = totals(yearRows.filter((r) => r.date < `${month}-01`))
   const monthTotal = totals(rows)
   const ytd = totals(yearRows.filter((r) => r.date <= `${month}-31`))
@@ -239,7 +245,10 @@ export default function KpirTab({ firm, month, onEdit }: Props): JSX.Element {
                   return (
                     <tr key={r.eventId} className="kpir-row" onClick={() => ev && onEdit(ev)}>
                       <td>{r.lp}</td>
-                      <td>{ddmm(r.date)}</td>
+                      <td>
+                        {ddmm(r.date)}
+                        {r.eventDate && <small className="kpir-sub" title={F('kpir.eventDate')}>{F('kpir.eventDateShort', { date: ddmm(r.eventDate) })}</small>}
+                      </td>
                       <td>{r.docNumber}</td>
                       <td>
                         {r.counterparty}
@@ -252,6 +261,7 @@ export default function KpirTab({ firm, month, onEdit }: Props): JSX.Element {
                           </span>
                         )}
                         {r.description}
+                        {r.nkup > 0 && <small className="kpir-sub">{F('kpir.partNkup', { amount: moneyAlways(r.nkup) })}</small>}
                       </td>
                       {SCREEN_COLUMNS.map((c) => (
                         <td key={c} className="num">
@@ -287,6 +297,23 @@ export default function KpirTab({ firm, month, onEdit }: Props): JSX.Element {
             {hasForeign && <> · {F('kpir.currencyNote')}</>}
           </div>
           {!vatPayer && infoVat > 0 && <div className="fin-hint">{F('vat.infoOnly', { vat: moneyAlways(infoVat) })}</div>}
+          {nkupRows.length > 0 && (
+            <div className="kpir-nkup">
+              <div className="fin-section-title">{F('kpir.nkupTitle', { amount: moneyAlways(nkupTotal) })}</div>
+              <div className="fin-hint">{F('kpir.nkupHint')}</div>
+              {nkupRows.map((r) => {
+                const ev = byId.get(r.eventId)
+                return (
+                  <div key={r.eventId} className="kpir-nkup-row" onClick={() => ev && onEdit(ev)}>
+                    <span>{ddmm(r.date)}</span>
+                    <span>{r.docNumber}</span>
+                    <span className="fin-grow">{[r.description, r.counterparty].filter(Boolean).join(' · ')}</span>
+                    <span className="num">{moneyAlways(r.nkup)} zł</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </>
       ) : view === 'vat' ? (
         <VatRegisterView

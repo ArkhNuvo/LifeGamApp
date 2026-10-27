@@ -345,6 +345,12 @@ export interface PayrollTotals {
   net: number
   /** ZUS for employees and contractors on civil contracts (both sides + health) — goes on the firm's DRA. */
   zus: number
+  /** The part of it withheld from the pay: employee social contributions and health. */
+  eeZus: number
+  /** The part the firm adds on top: employer social contributions, FP + FS, FGŚP, FEP. */
+  erZus: number
+  /** Withheld after tax and paid to a bailiff / for alimony. */
+  deductions: number
   /** PIT advances withheld — paid by the firm as PIT-4. */
   pit: number
   ppk: number
@@ -359,7 +365,7 @@ export interface PayrollTotals {
 }
 
 export function payrollTotals(slips: PayslipMonth[]): PayrollTotals {
-  const t: PayrollTotals = { gross: 0, net: 0, zus: 0, pit: 0, ppk: 0, cost: 0, b2b: 0, b2bNet: 0, b2bVat: 0, insuredCount: 0 }
+  const t: PayrollTotals = { gross: 0, net: 0, zus: 0, eeZus: 0, erZus: 0, deductions: 0, pit: 0, ppk: 0, cost: 0, b2b: 0, b2bNet: 0, b2bVat: 0, insuredCount: 0 }
   for (const s of slips) {
     if (s.member.contract === 'b2b') {
       t.b2b += s.net
@@ -370,7 +376,10 @@ export function payrollTotals(slips: PayslipMonth[]): PayrollTotals {
     t.gross += s.gross
     t.net += s.net
     t.zus += s.zus
+    t.eeZus += s.employee.pension + s.employee.disability + s.employee.sickness + s.employee.health
+    t.erZus += s.employer.pension + s.employer.disability + s.employer.accident + s.employer.labourFund + s.employer.fgsp + s.employer.fep
     t.pit += s.pit
+    t.deductions += s.deductions
     t.ppk += s.employee.ppk + s.employer.ppk
     t.cost += s.cost
     if (s.zus > 0) t.insuredCount += 1

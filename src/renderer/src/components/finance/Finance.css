@@ -1857,3 +1857,86 @@
 .staff-dra .staff-dra-total {
   font-weight: 600;
 }
+
+.firm-items--nkup .firm-item {
+  grid-template-columns: 2fr 1fr 0.9fr 1fr 1.6fr 42px auto;
+}
+
+.firm-item-nkup {
+  justify-self: center;
+  width: auto !important;
+}
+
+.firm-booking {
+  align-items: flex-start;
+}
+
+.firm-nkup {
+  margin-top: 22px;
+}
+
+.fin-nkup-badge {
+  color: var(--warning, #c98a00);
+}
+
+.kpir-nkup {
+  margin-top: 14px;
+}
+
+.kpir-nkup-row {
+  display: flex;
+  gap: 12px;
+  padding: 6px 8px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.kpir-nkup-row:hover {
+  background: var(--bg-2);
+}
+
+.tax-row--details {
+  position: relative;
+  cursor: help;
+}
+
+.tax-row--details > span:first-child {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.tax-pop {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  font-weight: 400;
+  /* the popup covers the rows below it; hovering them must still work */
+  pointer-events: none;
+}
+
+.tax-row--details:hover .tax-pop,
+.tax-row--details:focus-within .tax-pop {
+  display: grid;
+  gap: 3px;
+}
+
+.tax-pop-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.tax-pop-row--sub {
+  padding-left: 12px;
+  color: var(--text-2);
+}

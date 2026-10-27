@@ -1,11 +1,12 @@
 {
   "name": "lifegam",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "LifeGam - gamify your life",
   "main": "./out/main/index.js",
   "author": "aiarh",
   "private": true,
   "scripts": {
+    "test:payroll": "node --test tests/payroll-pl-2026/payroll.test.js",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",

@@ -35,7 +35,7 @@ export function postPayroll(firm: Firm, month: string, slips: PayslipMonth[]): v
   const people = slips.filter((s) => s.member.contract !== 'b2b')
   const gross = r2(people.reduce((s, p) => s + p.gross, 0))
   const contributions = r2(
-    people.reduce((s, p) => s + p.employer.pension + p.employer.disability + p.employer.accident + p.employer.labourFund + p.employer.fgsp, 0)
+    people.reduce((s, p) => s + p.employer.pension + p.employer.disability + p.employer.accident + p.employer.labourFund + p.employer.fgsp + p.employer.fep, 0)
   )
   const ppk = r2(people.reduce((s, p) => s + p.employer.ppk, 0))
   const line = (description: string, amount: number, kpir: LedgerItem['kpir']): LedgerItem => ({
@@ -49,7 +49,7 @@ export function postPayroll(firm: Firm, month: string, slips: PayslipMonth[]): v
   })
   const items = [
     line('Wynagrodzenia brutto', gross, '12'),
-    line('Składki ZUS, FP, FGŚP pracodawcy', contributions, '13'),
+    line('Składki ZUS, FP, FGŚP, FEP pracodawcy', contributions, '13'),
     ...(ppk > 0 ? [line('Wpłaty PPK pracodawcy', ppk, '13')] : [])
   ].filter((it) => it.gross > 0)
   const amount = r2(gross + contributions + ppk)

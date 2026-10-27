@@ -6,6 +6,7 @@ import { dueDate } from '../../../lib/polishTax'
 import { isActive, payrollYearRun, type PayslipMonth } from '../../../lib/payroll'
 import type { Firm, StaffMember } from '../../../lib/types'
 import ConfirmModal from '../../common/ConfirmModal'
+import DraSummary from './DraSummary'
 import StaffModal from './StaffModal'
 import { payrollEventId, postPayroll, useFirmPayroll } from './usePayroll'
 
@@ -136,6 +137,7 @@ export default function PersonnelTab({ firm, month }: { firm: Firm; month: strin
                       </span>
                     )}
                     {`${m.firstName} ${m.lastName}`.trim() || m.company}
+                    {slip && slip.overridden.length > 0 && <span className="staff-manual" title={F('staff.manual')}> ✎</span>}
                     <small className="kpir-sub">{m.contract === 'b2b' ? [m.company, m.nip && `NIP ${m.nip}`].filter(Boolean).join(' · ') : m.position}</small>
                   </td>
                   <td>{contractLabel(m)}</td>
@@ -168,6 +170,7 @@ export default function PersonnelTab({ firm, month }: { firm: Firm; month: strin
         </table>
       </div>
       <div className="fin-hint">{F('staff.simplified')}</div>
+      <DraSummary firm={firm} month={month} slips={slips} />
 
       {editing && (
         <StaffModal firm={firm} month={month} member={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />

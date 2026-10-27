@@ -1776,3 +1776,84 @@
   flex-direction: column;
   gap: 2px;
 }
+
+.staff-extras {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.staff-extra {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.staff-extra input {
+  width: 110px;
+  text-align: right;
+}
+
+.staff-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.staff-value-input {
+  width: 100px;
+  text-align: right;
+}
+
+.staff-edit {
+  font-size: 12px;
+  opacity: 0.45;
+  padding: 0 3px;
+}
+
+.tax-row:hover .staff-edit {
+  opacity: 1;
+}
+
+.tax-row--manual .tax-value {
+  color: var(--accent);
+}
+
+.staff-manual {
+  color: var(--accent);
+}
+
+.staff-sub {
+  padding-left: 22px;
+}
+
+.staff-sub select,
+.staff-sub input {
+  width: 120px;
+}
+
+.staff-more summary {
+  cursor: pointer;
+  font-size: 12px;
+  opacity: 0.8;
+  margin: 4px 0;
+}
+
+.staff-dra {
+  margin-top: 16px;
+}
+
+.staff-dra table {
+  font-size: 12px;
+}
+
+.staff-dra td.staff-dra-label {
+  white-space: nowrap;
+  opacity: 0.8;
+}
+
+.staff-dra .staff-dra-total {
+  font-weight: 600;
+}

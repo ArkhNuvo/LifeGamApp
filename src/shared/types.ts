@@ -327,10 +327,39 @@ export interface FirmTax {
   params: Record<string, Partial<TaxParams>>
   /** Accident insurance rate in percent (1.67 for payers with up to 9 insured). */
   accidentRate?: number
+  /** "Wakacje składkowe": the month ("2026-08") the owner's social contributions are waived, once a year. */
+  zusHoliday?: string | null
 }
 
 /** UoP = employment contract, zlecenie / dzieło = civil-law contracts, b2b = a contractor invoicing the firm. */
 export type ContractType = 'uop' | 'zlecenie' | 'dzielo' | 'b2b'
+
+/** Hand-entered figures of one month's payslip: extras that change the gross, and values replacing the calculation. */
+export interface PayslipOverride {
+  /** Overtime, bonus, holiday pay… — subject to ZUS. */
+  bonus?: number
+  /** UoP sick leave: days of the month (pay for them is withheld and replaced by sick pay). */
+  sickDays?: number
+  /** Average monthly gross of the last 12 months the sick pay is computed from (default: the current pay). */
+  sickBase?: number
+  /** Sick pay rate in percent: 80, or 100 (pregnancy, accident on the way to work). */
+  sickRate?: number
+  /** Sick pay from the employer — not subject to social contributions; replaces the computed amount. */
+  sickPay?: number
+  /** Withheld after tax: alimony, bailiff. */
+  deductions?: number
+  pension?: number
+  disability?: number
+  sickness?: number
+  health?: number
+  kup?: number
+  pit?: number
+  erPension?: number
+  erDisability?: number
+  erAccident?: number
+  erLabourFund?: number
+  erFgsp?: number
+}
 
 export interface StaffMember {
   id: string
@@ -363,13 +392,27 @@ export interface StaffMember {
   sickness: boolean
   /** Zlecenie: already insured elsewhere (e.g. a job paying at least the minimum wage) — only the health contribution is due. */
   otherTitle: boolean
-  /** Zlecenie / dzieło with a transfer of copyright: 50% deductible costs. */
+  /** Work with a transfer of copyright: 50% deductible costs on that part of the pay. */
   copyright: boolean
+  /** Part of the pay (percent) the author's costs apply to; default 100. */
+  copyrightShare?: number
+  /** PIT-2 variant: 1 = the full 300 zł, 2 = half (150 zł, two payers), 3 = a third (100 zł, three payers). */
+  pit2Part?: 1 | 2 | 3
+  /** Civil contract with the firm's own employee: taxed like the job (no flat 12% up to 200 zł). */
+  ownEmployee?: boolean
+  /** Exempt from the Labour Fund (55/60+, back from parental leave, under 30 in the first year…). */
+  fpExempt?: boolean
+  /** Exempt from FGŚP (e.g. back from parental leave). */
+  fgspExempt?: boolean
+  /** Works in special conditions — FEP 1.5%. */
+  fep?: boolean
   /** Enrolled in PPK (employee 2%, employer 1.5%). */
   ppk: boolean
   /** B2B: VAT rate on the contractor's invoices (null = not a VAT payer). */
   vatRate: number | null
   note: string
+  /** Hand-entered figures per month (YYYY-MM). */
+  overrides?: Record<string, PayslipOverride>
 }
 
 export interface Firm extends FinanceBook {

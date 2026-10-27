@@ -1,9 +1,11 @@
-import type { FirmTax, TaxParams } from './types'
+import { PARAMS_2026, calcJdgYear, r2, type JdgZus, type JdgZusVariant, type PayrollParams } from './payroll-pl-2026'
+import type { FirmTax, TaxParams, ZusScheme } from './types'
 
 /**
  * Polish rules for a sole proprietorship (JDG): ZUS, health contribution, PIT
- * advances and VAT. Yearly amounts are defaults that the user can override per
- * year in the firm's tax settings — they change every January.
+ * advances and VAT. The calculation itself is payroll-pl-2026 (calcJdgYear);
+ * this file feeds it the firm's settings and the KPiR figures. Yearly amounts are
+ * defaults that the user can override per year in the firm's tax settings.
  */
 
 export const DEFAULT_PARAMS: Record<string, TaxParams> = {
@@ -26,19 +28,8 @@ export const DEFAULT_PARAMS: Record<string, TaxParams> = {
   }
 }
 
-/** Fixed by statute (percent). */
-export const ZUS_RATES = { pension: 19.52, disability: 8, sickness: 2.45, accident: 1.67, labourFund: 2.45 }
 export const PIT = {
-  skalaThreshold: 120000,
-  skalaLow: 12,
-  skalaHigh: 32,
-  taxReducingAmount: 3600,
-  liniowy: 19,
-  /** Health contribution rates (percent of income). */
-  healthSkala: 9,
-  healthLiniowy: 4.9,
-  /** Ryczałt revenue tiers for the flat health contribution. */
-  ryczaltTiers: [60000, 300000] as const
+  skalaThreshold: PARAMS_2026.pit.threshold
 }
 export const VAT_EXEMPTION_LIMIT: Record<string, number> = { '2025': 200000, '2026': 240000 }
 export const RYCZALT_RATES = [17, 15, 14, 12, 10, 8.5, 5.5, 3, 2]
@@ -60,8 +51,67 @@ export function paramsFor(tax: FirmTax, year: number): TaxParams {
   return { ...base, ...(tax.params[String(year)] ?? {}) }
 }
 
-const r2 = (n: number): number => Math.round(n * 100) / 100
+/** Yearly amounts the user doesn't edit: bases behind the editable amounts, limits and the zlecenie hourly minimum. */
+interface YearConstants {
+  zusLimit30x: number
+  minHourly: number
+  youngLimit: number
+  /** Base of the minimum health contribution of skala / liniowy (its 9% is TaxParams.healthMin). */
+  healthMinBase: number
+  /** Average wage of Q4 of the previous year — the ryczałt health bases are 60/100/180% of it. */
+  ryczaltAvgWage: number
+}
 
+const YEAR_CONSTANTS: Record<string, YearConstants> = {
+  '2024': { zusLimit30x: 234720, minHourly: 28.1, youngLimit: 85528, healthMinBase: 4242, ryczaltAvgWage: 7767.85 },
+  '2025': { zusLimit30x: 260190, minHourly: 30.5, youngLimit: 85528, healthMinBase: 3499.5, ryczaltAvgWage: 8549.18 },
+  '2026': {
+    zusLimit30x: PARAMS_2026.zusLimit30x,
+    minHourly: PARAMS_2026.minHourly,
+    youngLimit: PARAMS_2026.pit.youngLimit,
+    healthMinBase: PARAMS_2026.health.minBase,
+    ryczaltAvgWage: PARAMS_2026.health.ryczaltAvgWage
+  }
+}
+
+function yearConstants(year: number): YearConstants {
+  const known = Object.keys(YEAR_CONSTANTS).sort()
+  return YEAR_CONSTANTS[String(year)] ?? YEAR_CONSTANTS[known[year < Number(known[0]) ? 0 : known.length - 1]]
+}
+
+/**
+ * Parameters of the calculation module for the firm's year: the 2026 statutory rates with the year's
+ * amounts, the firm's own overrides and its accident rate.
+ */
+export function calcParams(tax: FirmTax, year: number): PayrollParams {
+  const params = paramsFor(tax, year)
+  const c = yearConstants(year)
+  const H = PARAMS_2026.rates.health
+  // A health amount the user typed by hand is turned back into its base (the base goes on the DRA).
+  const baseOf = (amount: number | undefined, known: number): number =>
+    amount === undefined || r2(known * H) === amount ? known : r2(amount / H)
+  const ryczalt = tax.params[String(year)]?.healthRyczalt
+  return {
+    ...PARAMS_2026,
+    year,
+    minWage: params.minimumWage,
+    minHourly: c.minHourly,
+    forecastAvgWage: r2(params.zusFullBase / 0.6),
+    zusLimit30x: c.zusLimit30x,
+    rates: { ...PARAMS_2026.rates, wypadkowe: (tax.accidentRate ?? 1.67) / 100 },
+    jdg: { ...PARAMS_2026.jdg, fullBase: params.zusFullBase, prefBase: params.zusPreferentialBase },
+    health: {
+      ...PARAMS_2026.health,
+      minBase: baseOf(tax.params[String(year)]?.healthMin, c.healthMinBase),
+      minBasePrevYear: baseOf(tax.params[String(year - 1)]?.healthMin, yearConstants(year - 1).healthMinBase),
+      ryczaltAvgWage: ryczalt ? r2(ryczalt[1] / H) : c.ryczaltAvgWage,
+      linearDeductionLimit: params.liniowyHealthDeductionLimit
+    },
+    pit: { ...PARAMS_2026.pit, youngLimit: c.youngLimit }
+  }
+}
+
+/** The owner's social contributions of a month. */
 export interface SocialZus {
   base: number
   pension: number
@@ -74,45 +124,24 @@ export interface SocialZus {
   total: number
 }
 
-/** Monthly social contributions for the firm's ZUS scheme. */
-export function socialZus(tax: FirmTax, params: TaxParams): SocialZus {
-  const base =
-    tax.zus === 'full'
-      ? params.zusFullBase
-      : tax.zus === 'preferential'
-        ? params.zusPreferentialBase
-        : tax.zus === 'small_plus'
-          ? Math.max(params.zusPreferentialBase, Math.min(params.zusFullBase, tax.smallPlusBase ?? params.zusPreferentialBase))
-          : 0
-  const pct = (rate: number): number => r2((base * rate) / 100)
-  const pension = pct(ZUS_RATES.pension)
-  const disability = pct(ZUS_RATES.disability)
-  const sickness = tax.sickness && base > 0 ? pct(ZUS_RATES.sickness) : 0
-  const accident = pct(ZUS_RATES.accident)
-  // The Labour Fund is due only on a base of at least the minimum wage (not on preferential/small bases).
-  const labourFund = base >= params.minimumWage ? pct(ZUS_RATES.labourFund) : 0
-  const social = r2(pension + disability + sickness + accident)
-  return { base, pension, disability, sickness, accident, labourFund, social, total: r2(social + labourFund) }
-}
+const socialOf = (z: JdgZus): SocialZus => ({
+  base: z.base,
+  pension: z.emerytalne,
+  disability: z.rentowe,
+  sickness: z.chorobowe,
+  accident: z.wypadkowe,
+  labourFund: z.fp,
+  social: z.social,
+  total: z.total
+})
 
-/** Monthly health contribution. `income` = the month's income (revenue for ryczałt: the year's revenue so far). */
-export function healthContribution(tax: FirmTax, params: TaxParams, monthIncome: number, yearRevenue: number): number {
-  if (tax.form === 'ryczalt') {
-    const [low, high] = PIT.ryczaltTiers
-    return yearRevenue <= low ? params.healthRyczalt[0] : yearRevenue <= high ? params.healthRyczalt[1] : params.healthRyczalt[2]
-  }
-  const rate = tax.form === 'liniowy' ? PIT.healthLiniowy : PIT.healthSkala
-  return r2(Math.max(params.healthMin, (Math.max(0, monthIncome) * rate) / 100))
-}
-
-/** Tax due from the beginning of the year on a cumulative base (before subtracting advances already paid). */
-function cumulativeTax(tax: FirmTax, base: number): number {
-  if (base <= 0) return 0
-  if (tax.form === 'liniowy') return (base * PIT.liniowy) / 100
-  if (tax.form === 'ryczalt') return (base * tax.ryczaltRate) / 100
-  const low = Math.min(base, PIT.skalaThreshold) * (PIT.skalaLow / 100)
-  const high = Math.max(0, base - PIT.skalaThreshold) * (PIT.skalaHigh / 100)
-  return Math.max(0, low + high - PIT.taxReducingAmount)
+/** "none" (insured elsewhere) pays no social contributions, like ulga na start — only health. */
+const ZUS_VARIANT: Record<ZusScheme, JdgZusVariant> = {
+  full: 'pelny',
+  preferential: 'preferencyjny',
+  small_plus: 'malyZusPlus',
+  start: 'start',
+  none: 'start'
 }
 
 export interface MonthFigures {
@@ -129,7 +158,12 @@ export interface MonthTax {
   costs: number
   income: number
   social: SocialZus
+  /** The module's own figures, for the DRA summary. */
+  zus: JdgZus
   health: number
+  /** Base of the health contribution (the previous month's income, the minimum base or the ryczałt tier base). */
+  healthBase: number
+  healthMinApplied: boolean
   /** PIT advance for the month, whole złoty. */
   pitAdvance: number
   vat: number
@@ -142,52 +176,59 @@ export interface MonthTax {
   ytdPit: number
 }
 
+function jdgYear(tax: FirmTax, year: number, months: MonthFigures[], prevDecIncome: number): ReturnType<typeof calcJdgYear> {
+  const holiday = tax.zusHoliday?.startsWith(`${year}-`) ? Number(tax.zusHoliday.slice(5, 7)) : null
+  return calcJdgYear(
+    {
+      taxForm: tax.form,
+      ryczaltRate: tax.ryczaltRate / 100,
+      zusVariant: ZUS_VARIANT[tax.zus],
+      malyZusPlusBase: tax.smallPlusBase ?? undefined,
+      chorobowe: tax.sickness,
+      wakacjeMonth: tax.zus === 'none' ? null : holiday,
+      prevDecIncome,
+      months: months.map((f) => ({ revenue: f.revenue, costs: f.costs }))
+    },
+    calcParams(tax, year)
+  )
+}
+
 /**
- * Month-by-month figures for a year, January to `upTo` (1–12). Contributions are
- * counted for the month they concern (an estimate: the law deducts them when paid).
+ * Month-by-month figures for a year, January to `upTo` (1–12). The health contribution of a month
+ * is computed from the previous month's income, so January needs last December (`prevMonths`).
+ * Contributions are counted in the month they concern (paid by the 20th of the next one).
  */
-export function yearTax(tax: FirmTax, year: number, months: MonthFigures[], upTo: number): MonthTax[] {
-  const params = paramsFor(tax, year)
-  const zus = socialZus(tax, params)
-  const out: MonthTax[] = []
+export function yearTax(tax: FirmTax, year: number, months: MonthFigures[], upTo: number, prevMonths?: MonthFigures[]): MonthTax[] {
+  const prevDecIncome = prevMonths ? (jdgYear(tax, year - 1, prevMonths, 0).rows[11]?.monthIncome ?? 0) : 0
+  const { rows } = jdgYear(tax, year, months, prevDecIncome)
+  const empty: MonthFigures = { revenue: 0, costs: 0, income: 0, vatOut: 0, vatIn: 0 }
   let ytdRevenue = 0
   let ytdIncome = 0
-  let ytdSocial = 0
-  let ytdHealth = 0
-  let paid = 0
-  for (let m = 1; m <= upTo; m++) {
-    const f = months[m - 1] ?? { revenue: 0, costs: 0, income: 0, vatOut: 0, vatIn: 0 }
+  let ytdPit = 0
+  return rows.slice(0, upTo).map((r, i) => {
+    const f = months[i] ?? empty
     ytdRevenue += f.revenue
     ytdIncome += f.income
-    // The health-contribution year runs February–January: January still uses last year's minimum.
-    const healthParams = m === 1 ? { ...params, healthMin: paramsFor(tax, year - 1).healthMin } : params
-    const health = healthContribution(tax, healthParams, f.income, ytdRevenue)
-    ytdSocial += zus.social
-    ytdHealth += health
-    let base: number
-    if (tax.form === 'liniowy') base = ytdIncome - ytdSocial - Math.min(ytdHealth, params.liniowyHealthDeductionLimit)
-    else if (tax.form === 'ryczalt') base = ytdRevenue - ytdSocial - ytdHealth / 2
-    else base = ytdIncome - ytdSocial
-    const due = Math.round(cumulativeTax(tax, Math.round(base)))
-    const advance = Math.max(0, due - paid)
-    paid += advance
-    out.push({
-      month: `${year}-${String(m).padStart(2, '0')}`,
+    ytdPit += r.pitAdvance
+    return {
+      month: `${year}-${String(i + 1).padStart(2, '0')}`,
       revenue: r2(f.revenue),
       costs: r2(f.costs),
       income: r2(f.income),
-      social: zus,
-      health,
-      pitAdvance: advance,
+      social: socialOf(r.zus),
+      zus: r.zus,
+      health: r.health,
+      healthBase: r.healthBase,
+      healthMinApplied: r.healthMinApplied,
+      pitAdvance: r.pitAdvance,
       vat: tax.vatPayer ? r2(f.vatOut - f.vatIn) : 0,
       vatInfo: r2(f.vatOut + f.vatIn),
-      ytdBase: r2(base),
+      ytdBase: r.taxBaseYtd,
       ytdRevenue: r2(ytdRevenue),
       ytdIncome: r2(ytdIncome),
-      ytdPit: paid
-    })
-  }
-  return out
+      ytdPit
+    }
+  })
 }
 
 /** Deadline for the month's payment: ZUS and PIT on the 20th, VAT on the 25th of the next month. */

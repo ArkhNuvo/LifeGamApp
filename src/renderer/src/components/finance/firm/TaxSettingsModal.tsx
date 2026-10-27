@@ -93,6 +93,18 @@ export default function TaxSettingsModal({ firm, year, onClose }: { firm: Firm; 
             {F('ts.sickness')}
           </label>
         )}
+        {tax.zus !== 'start' && tax.zus !== 'none' && (
+          <label className="form-field">
+            <span>{F('ts.zusHoliday')}</span>
+            <input
+              type="month"
+              value={tax.zusHoliday ?? ''}
+              onChange={(e) => set('zusHoliday', e.target.value || null)}
+              style={{ maxWidth: 180 }}
+            />
+            <span className="field-hint">{F('ts.zusHolidayHint')}</span>
+          </label>
+        )}
         <div className="fin-row">
           <label className="fin-keep-balances fin-grow">
             <input type="checkbox" checked={tax.vatPayer} onChange={(e) => set('vatPayer', e.target.checked)} />

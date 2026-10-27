@@ -24,7 +24,7 @@ export function useFirmYear(firm: Firm, month: string): FirmYear {
     const year = Number(month.slice(0, 4))
     const monthIndex = Number(month.slice(5, 7))
     const months = monthFigures(ctx, firm.ledger.events, String(year))
-    const taxes = yearTax(firm.tax, year, months, 12)
+    const taxes = yearTax(firm.tax, year, months, 12, monthFigures(ctx, firm.ledger.events, String(year - 1)))
     return { ctx, year, monthIndex, months, taxes, current: taxes[monthIndex - 1] }
   }, [accounts, rates, firm.tax, firm.ledger.events, month])
 }

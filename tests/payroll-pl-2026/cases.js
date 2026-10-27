@@ -120,7 +120,7 @@ export function defineCases(P) {
       eq(r.employee.total, 137.1, 'ZUS');
       eq(r.pitAdvance, 0, 'zaliczka');
       eq(r.health, 60.45, 'zdrowotna = 613×17% − 43,76 (без округления до злотых)');
-      eq(r.employer.fp, 0, 'FP нет — ниже минимальной');
+      eq(r.employer.fp, 24.5, 'FP есть: 1000 ≥ 4806 × 0,2 = 961,20');
       eq(r.healthCapped ? 1 : 0, 1, 'флаг ограничения');
     } },
     { group: 'Umowa o pracę', name: 'Предупреждение: оклад ниже минимальной', run(eq) {
@@ -138,6 +138,12 @@ export function defineCases(P) {
       eq(calcEmployment({ gross: 961.2, etat: '1/5' }).etat.minWage, 961.2, '1/5: минимум 961,20');
       eq(calcEmployment({ gross: 5000, etat: 'abc' }).warnings.length, 1, 'некорректный etat');
     } },
+    { group: 'Umowa o pracę', name: 'FP при неполном etacie: порог пропорционален wymiarowi', run(eq) {
+      eq(calcEmployment({ gross: 600, etat: '1/8' }).employer.fp, 0, '600 < 600,75 — FP нет');
+      eq(calcEmployment({ gross: 2403, etat: '1/2' }).employer.fp, 58.87, '1/2 от минимальной — FP есть');
+      eq(calcEmployment({ gross: 2403, etat: 1 }).employer.fp, 0, 'полный etat ниже минимальной — FP нет');
+      eq(calcEmployment({ contract: 'zlecenie', gross: 2403, pit2: 0 }).employer.fp, 0, 'zlecenie — порог без etatu');
+    } },
     { group: 'Umowa o pracę', name: '1/8 etatu от минимальной (600,75 zł)', run(eq) {
       const r = calcEmployment({ gross: 600.75, etat: '1/8' });
       eq(r.warnings.length, 1, 'только предупреждение об ограничении zdrowotnej');
@@ -146,9 +152,9 @@ export function defineCases(P) {
       eq(r.pitAdvance, 0, 'zaliczka');
       eq(r.health, 1.8, 'zdrowotna = 268×17% − 43,76, как в Płatniku');
       eq(r.net, 516.59, 'netto');
-      eq(r.employer.fp, 0, 'FP');
-      eq(r.employer.total, 108.31, 'ZUS pracodawcy');
-      eq(r.employerCost, 709.06, 'koszt');
+      eq(r.employer.fp, 14.72, 'FP: порог 4806 × 1/8 = 600,75, как в DRA из Płatnika');
+      eq(r.employer.total, 123.03, 'ZUS pracodawcy');
+      eq(r.employerCost, 723.78, 'koszt');
     } },
 
     // ── zlecenie / dzieło ──
@@ -222,6 +228,9 @@ export function defineCases(P) {
       const { total } = P.buildZestawienie([a, b]);
       eq(total.total, 1978.36, 'Razem społeczne');
       eq(total.health, 434.34, 'Razem zdrowotne');
+      eq(total.fp, 153.19, 'VII.01 FP + FS');
+      eq(total.fgsp, 0.6, 'VII.02 FGŚP');
+      eq(r2(total.total + total.health + total.fp + total.fgsp), 2566.49, 'IX.02 do zapłaty');
     } },
     { group: 'Zestawienie DRA', name: 'Коды и пропуски: zlecenie 04 11 00, dzieło и студент не входят', run(eq) {
       const txt = (a, e, label) => eq(a === e ? 1 : 0, 1, `${label}: ожидалось «${e}», получено «${a}»`);

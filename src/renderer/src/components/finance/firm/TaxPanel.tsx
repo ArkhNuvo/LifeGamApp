@@ -64,7 +64,7 @@ export default function TaxPanel({ firm, month }: { firm: Firm; month: string })
       <div className="fin-hint">{F(`ts.form.${firm.tax.form}`)} · {F(`ts.zus.${firm.tax.zus}`)}</div>
 
       <div className="tax-card">
-        {current.social.total > 0 && <Row label={F('tax.social')} value={pln(current.social.social)} hint={`${F('tax.labourFund')}: ${pln(current.social.labourFund)}`} />}
+        {current.social.total > 0 && <Row label={F('tax.social')} value={pln(current.social.social)} />}
         {current.social.labourFund > 0 && <Row label={F('tax.labourFund')} value={pln(current.social.labourFund)} />}
         <Row label={F('tax.health')} value={pln(current.health)} />
         <Row label={F('tax.zusTotal', { date: ddmm(dueDate(current.month, 20)) })} value={pln(zusTotal)} strong />

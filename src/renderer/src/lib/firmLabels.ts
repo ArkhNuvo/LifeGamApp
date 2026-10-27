@@ -38,7 +38,7 @@ const LABELS: Record<string, Row> = {
   // tax panel
   'tax.title': ['Налоги и ZUS', 'Taxes & ZUS', 'Podatki i ZUS'],
   'tax.social': ['ZUS społeczne', 'ZUS społeczne', 'ZUS społeczne'],
-  'tax.labourFund': ['w tym Fundusz Pracy', 'incl. Fundusz Pracy', 'w tym Fundusz Pracy'],
+  'tax.labourFund': ['+ Fundusz Pracy и Solidarnościowy', '+ Labour Fund and Solidarity Fund', '+ Fundusz Pracy i Solidarnościowy'],
   'tax.health': ['Składka zdrowotna', 'Składka zdrowotna', 'Składka zdrowotna'],
   'tax.zusTotal': ['ZUS к оплате до {date}', 'ZUS due by {date}', 'ZUS do zapłaty do {date}'],
   'tax.pit': ['Zaliczka PIT до {date}', 'PIT advance due by {date}', 'Zaliczka PIT do {date}'],

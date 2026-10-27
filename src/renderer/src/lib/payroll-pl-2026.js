@@ -203,8 +203,11 @@ export function calcEmployment(input = {}, p = PARAMS_2026) {
   let fpDue;
   if (i.fpMonthlyBase !== undefined) fpDue = i.fpMonthlyBase >= p.minWage;
   else {
-    // при болезни минимальная зарплата уменьшается пропорционально дням отсутствия
-    const fpThreshold = sick ? r2((p.minWage * (30 - Math.min(30, sick.days))) / 30) : p.minWage;
+    // для неполного etatu минимальная зарплата уменьшается пропорционально wymiarowi (1/8 → 600,75 —
+    // так считает Płatnik), при болезни — пропорционально дням отсутствия
+    const etatShare = isUop ? (parseEtat(i.etat) || { value: 1 }).value : 1;
+    const minForFp = r2(p.minWage * etatShare);
+    const fpThreshold = sick ? r2((minForFp * (30 - Math.min(30, sick.days))) / 30) : minForFp;
     fpDue = zusBase > 0 && zusBase >= fpThreshold;
   }
   fpDue = fpDue && socialInsured && !i.fpExempt;

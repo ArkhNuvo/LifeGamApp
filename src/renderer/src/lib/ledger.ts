@@ -96,6 +96,8 @@ export function accountBalance(draft: FinanceBook, accountId: string): number {
 }
 
 function eventDeltas(ev: LedgerEvent): { accountId: string; delta: number }[] {
+  // Booked without a payment: the account is only there for the currency.
+  if (ev.noPayment && ev.type !== 'transfer') return []
   if (ev.type === 'income') return [{ accountId: ev.accountId, delta: ev.amount }]
   if (ev.type === 'expense') return [{ accountId: ev.accountId, delta: -ev.amount }]
   const out = [{ accountId: ev.accountId, delta: -ev.amount }]
@@ -118,7 +120,7 @@ function applyCryptoDelta(draft: FinanceBook, ev: LedgerEvent, sign: 1 | -1): vo
 }
 
 function applyEventEffects(draft: FinanceBook, ev: LedgerEvent): void {
-  if (ev.crypto && ev.type !== 'transfer') {
+  if (ev.crypto && ev.type !== 'transfer' && !ev.noPayment) {
     applyCryptoDelta(draft, ev, 1)
     ev.effectsApplied = true
     return
@@ -128,7 +130,7 @@ function applyEventEffects(draft: FinanceBook, ev: LedgerEvent): void {
 }
 
 function revertEventEffects(draft: FinanceBook, ev: LedgerEvent): void {
-  if (ev.crypto && ev.type !== 'transfer') {
+  if (ev.crypto && ev.type !== 'transfer' && !ev.noPayment) {
     applyCryptoDelta(draft, ev, -1)
     ev.effectsApplied = false
     return

@@ -158,6 +158,11 @@ export default function EventsTab({ month, onEdit }: Props): JSX.Element {
                         NKUP
                       </span>
                     )}
+                    {ev.noPayment && ev.type !== 'transfer' && (
+                      <span className="fin-planned-badge" title={F('ev.noPaymentHint')}>
+                        {F('ev.noPaymentShort')}
+                      </span>
+                    )}
                     {ev.bookingDate && ev.bookingDate !== ev.date && (
                       <span className="fin-planned-badge" title={F('ev.bookingDate')}>
                         {F('kpir.bookedShort', { date: ev.bookingDate.split('-').reverse().join('.') })}

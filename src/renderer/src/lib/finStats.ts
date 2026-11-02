@@ -570,7 +570,7 @@ const COMPUTE: Record<string, Compute> = {
       if (id) net.set(accountName(ctx, id), (net.get(accountName(ctx, id)) ?? 0) + v)
     }
     for (const e of ctx.events) {
-      if (!e.confirmed || !months.has(monthOf(e.date)) || e.crypto) continue
+      if (!e.confirmed || !months.has(monthOf(e.date)) || e.crypto || (e.noPayment && e.type !== 'transfer')) continue
       if (e.type === 'income') add(e.accountId, evMain(ctx, e))
       else if (e.type === 'expense') add(e.accountId, -evMain(ctx, e))
       else {

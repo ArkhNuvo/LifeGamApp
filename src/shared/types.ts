@@ -240,6 +240,8 @@ export interface LedgerEvent {
   bookingDate?: string | null
   /** Firm books: the whole document is "nie stanowi kosztu uzyskania przychodu" — kept out of the KPiR and the tax base. */
   nkup?: boolean
+  /** Booked (KPiR, taxes, VAT, RZiS) without money moving on any of the firm's accounts — paid privately, offset, not paid yet. */
+  noPayment?: boolean
 }
 
 /** A recurring payment template; its occurrences are materialised as planned events. */

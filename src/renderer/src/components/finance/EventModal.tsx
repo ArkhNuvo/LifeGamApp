@@ -129,6 +129,7 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
   const [items, setItems] = useState<LedgerItem[]>(initial?.items ?? [])
   const [bookingDate, setBookingDate] = useState(initial?.bookingDate ?? '')
   const [nkup, setNkup] = useState(!!initial?.nkup)
+  const [noPayment, setNoPayment] = useState(!!initial?.noPayment)
   const [newCpName, setNewCpName] = useState<string | null>(null)
   const [newCpKind, setNewCpKind] = useState<CounterpartyKind>('service')
 
@@ -457,7 +458,8 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
             items: items.filter((it) => it.net !== 0 || it.gross !== 0 || it.description.trim()),
             doc: doc.number || doc.counterpartyName || doc.counterpartyNip || doc.ksef || doc.counterpartyAddress ? doc : null,
             bookingDate: bookingDate && bookingDate !== date ? bookingDate : null,
-            nkup: type === 'expense' && nkup
+            nkup: type === 'expense' && nkup,
+            noPayment
           }
         : {})
     }
@@ -836,6 +838,15 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
           </div>
         )}
         {firm && type === 'expense' && nkup && <div className="field-hint">{F('ev.nkupHint')}</div>}
+        {firm && type !== 'transfer' && (
+          <>
+            <label className="fin-keep-balances">
+              <input type="checkbox" checked={noPayment} onChange={(e) => setNoPayment(e.target.checked)} />
+              {F('ev.noPayment')}
+            </label>
+            {noPayment && <div className="field-hint">{F('ev.noPaymentHint')}</div>}
+          </>
+        )}
 
         {firm && type !== 'transfer' && (
           <DocumentItems
@@ -846,8 +857,9 @@ export default function EventModal({ initial, defaultDate, onClose }: Props): JS
             items={items}
             onItems={(next) => {
               setItems(next)
-              // While the amount is still empty, the lines fill it in.
-              if ((!amount || amountValue === 0) && next.length > 0) {
+              // Until an amount is typed by hand, it is the document total — every line, NKUP ones
+              // included: they are paid from the account too, only kept out of the KPiR.
+              if (!amountTouched && next.length > 0) {
                 const gross = next.reduce((sum, it) => sum + it.gross, 0)
                 if (gross > 0) setAmount(String(Math.round(gross * 100) / 100))
               }

@@ -149,7 +149,7 @@ export default function DocumentItems({ type, nkupAll, doc, onDoc, items, onItem
           </div>
           {mismatch && (
             <div className="field-hint fin-negative">
-              {F('ev.mismatch')}{' '}
+              {F('ev.mismatch', { amount: `${amount.toFixed(2)} ${currency}`, total: `${total.gross.toFixed(2)} ${currency}` })}{' '}
               <button type="button" className="btn" onClick={() => onUseTotal(total.gross)}>
                 {F('ev.useTotal')}
               </button>

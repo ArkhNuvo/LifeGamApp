@@ -305,6 +305,9 @@ const LABELS: Record<string, Row> = {
   'kpir.partNkup': ['+ NKUP {amount} zł вне книги', '+ NKUP {amount} zł outside the book', '+ NKUP {amount} zł poza księgą'],
   'kpir.nkupTitle': ['Wydatki NKUP за месяц: {amount} zł', 'NKUP expenses of the month: {amount} zł', 'Wydatki NKUP w miesiącu: {amount} zł'],
   'kpir.nkupHint': ['Не вошли в KPiR и в базу налога; в RZiS учтены как затраты.', 'Not in the KPiR or the tax base; counted as costs in the RZiS.', 'Nie weszły do KPiR ani do podstawy podatku; w RZiS ujęte jako koszty.'],
+  'ev.noPayment': ['Без оплаты со счёта (только KPiR и налоги)', 'No payment from an account (KPiR and taxes only)', 'Bez płatności z konta (tylko KPiR i podatki)'],
+  'ev.noPaymentHint': ['Событие попадает в KPiR, налоги, VAT и RZiS, но не меняет баланс ни расчётного, ни наличного счёта: оплачено из личных средств, kompensata, ещё не оплаченная фактура. Счёт выше нужен только для валюты.', 'The event goes into the KPiR, taxes, VAT and RZiS but doesn’t change the balance of any account: paid privately, offset, an invoice not paid yet. The account above only sets the currency.', 'Zdarzenie trafia do KPiR, podatków, VAT i RZiS, ale nie zmienia salda ani rachunku rozliczeniowego, ani kasy: opłacone prywatnie, kompensata, faktura jeszcze nieopłacona. Konto powyżej służy tylko do waluty.'],
+  'ev.noPaymentShort': ['без оплаты', 'no payment', 'bez płatności'],
   // event modal (firm)
   'ev.doc': ['Реквизиты документа', 'Document details', 'Dane dokumentu'],
   'ev.docNumber': ['Номер документа', 'Document number', 'Nr dowodu księgowego'],
@@ -322,7 +325,7 @@ const LABELS: Record<string, Row> = {
   'ev.column': ['Колонка KPiR', 'KPiR column', 'Kolumna KPiR'],
   'ev.notInBook': ['не в KPiR', 'not in KPiR', 'poza KPiR'],
   'ev.itemsTotal': ['Итого позиций: нетто {net}, VAT {vat}, брутто {gross}', 'Lines total: net {net}, VAT {vat}, gross {gross}', 'Suma pozycji: netto {net}, VAT {vat}, brutto {gross}'],
-  'ev.mismatch': ['Сумма события отличается от итога позиций', 'The event amount differs from the lines total', 'Kwota zdarzenia różni się od sumy pozycji'],
+  'ev.mismatch': ['Сумма события {amount} отличается от итога позиций {total} (с NKUP) — со счёта спишется {amount}.', 'The event amount {amount} differs from the lines total {total} (NKUP included) — the account is charged {amount}.', 'Kwota zdarzenia {amount} różni się od sumy pozycji {total} (z NKUP) — z konta zejdzie {amount}.'],
   'ev.useTotal': ['Взять итог позиций', 'Use the lines total', 'Użyj sumy pozycji'],
   'ev.itemsHint': [
     'Без позиций сумма попадёт в колонку {col}. Позиции позволяют разнести документ по разным колонкам.',
